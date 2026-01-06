@@ -5,13 +5,28 @@ import time
 # Make scrapers optional - they won't work in Railway without Chrome/display
 try:
     from app.scrapers.linkedin_scraper import LinkedInScraper
-    from app.scrapers.indeed_scraper import IndeedScraper
-    SCRAPERS_AVAILABLE = True
+    LINKEDIN_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ Warning: Scrapers not available - {e}")
+    print(f"⚠️ Warning: LinkedIn scraper not available - {e}")
     LinkedInScraper = None
+    LINKEDIN_AVAILABLE = False
+
+try:
+    from app.scrapers.indeed_scraper import IndeedScraper
+    INDEED_SELENIUM_AVAILABLE = True
+except ImportError as e:
+    print(f"ℹ️ Info: Selenium Indeed scraper not available (expected in production) - {e}")
     IndeedScraper = None
-    SCRAPERS_AVAILABLE = False
+    INDEED_SELENIUM_AVAILABLE = False
+
+# JSearch API scraper - works everywhere (no Selenium needed)
+try:
+    from app.scrapers.jsearch_scraper import JSearchScraper
+    JSEARCH_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Warning: JSearch scraper not available - {e}")
+    JSearchScraper = None
+    JSEARCH_AVAILABLE = False
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -20,22 +35,37 @@ class JobService:
         self.db = db
         self.collection = db.jobs
         
-        # Initialize scrapers only if available
-        if SCRAPERS_AVAILABLE and LinkedInScraper:
+        # Initialize LinkedIn scraper (works on Railway - uses requests only)
+        if LINKEDIN_AVAILABLE and LinkedInScraper:
             self.linkedin_scraper = LinkedInScraper()
+            print("✅ LinkedIn scraper initialized")
         else:
             self.linkedin_scraper = None
+            print("ℹ️ LinkedIn scraper not available")
+        
+        # Initialize JSearch scraper (works on Railway - API-based)
+        if JSEARCH_AVAILABLE and JSearchScraper:
+            self.jsearch_scraper = JSearchScraper()
+            print("✅ JSearch API scraper initialized")
+        else:
+            self.jsearch_scraper = None
+            print("ℹ️ JSearch API scraper not available")
             
-        if SCRAPERS_AVAILABLE and IndeedScraper:
+        # Initialize Selenium Indeed scraper (only works locally)
+        if INDEED_SELENIUM_AVAILABLE and IndeedScraper:
             self.indeed_scraper = IndeedScraper(use_brave=use_brave)
+            print("✅ Indeed Selenium scraper initialized (local only)")
         else:
             self.indeed_scraper = None
-            print("ℹ️ Running without scraper support (API-only mode)")
+        
+        # Check if we have at least one scraper
+        if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
+            print("⚠️ Running in API-only mode (no scrapers available)")
     
     async def scrape_and_store_jobs(self, keywords: str, location: str = ""):
         """Scrape jobs from multiple platforms and store in DB"""
-        if not self.linkedin_scraper and not self.indeed_scraper:
-            print("⚠️ Scraping not available in this environment (no Selenium/Chrome support)")
+        if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
+            print("⚠️ Scraping not available in this environment (no scrapers configured)")
             return 0
             
         print(f"\n{'='*60}")
@@ -45,48 +75,65 @@ class JobService:
         # Normalize the search category (e.g., "spring boot developer" -> "Spring Boot")
         search_category = keywords.strip().title()
         
-        # Scrape LinkedIn (with pagination - up to 50+ jobs)
-        print("📘 Scraping LinkedIn...")
-        linkedin_jobs = self.linkedin_scraper.search_jobs(keywords, location, max_pages=5)
-        print(f"✅ Found {len(linkedin_jobs)} LinkedIn jobs\n")
+        all_jobs = []
         
-        # Fetch full descriptions for LinkedIn jobs
-        print(f"📄 Fetching full descriptions for LinkedIn jobs...")
-        for idx, job in enumerate(linkedin_jobs, 1):
-            try:
-                print(f"  [{idx}/{len(linkedin_jobs)}] Fetching: {job['title'][:50]}...")
-                details = self.linkedin_scraper.get_job_details(job['url'])
-                if details.get('description'):
-                    job['description'] = details['description']
-                if details.get('job_type') and not job.get('job_type'):
-                    job['job_type'] = details['job_type']
-                time.sleep(2)  # Rate limiting
-            except Exception as e:
-                print(f"  ⚠️ Error fetching details: {e}")
-        print(f"✅ LinkedIn descriptions fetched\n")
+        # 1. Scrape with JSearch API (works on Railway) - gives Indeed + LinkedIn + Glassdoor
+        if self.jsearch_scraper:
+            print("🚀 Scraping with JSearch API (Indeed, LinkedIn, Glassdoor, etc.)...")
+            jsearch_jobs = self.jsearch_scraper.search_jobs(keywords, location, max_pages=2)
+            all_jobs.extend(jsearch_jobs)
+            print(f"✅ Found {len(jsearch_jobs)} jobs from JSearch API\n")
         
-        # Scrape Indeed (with pagination - 30+ jobs)
-        print("🔵 Scraping Indeed...")
-        indeed_jobs = self.indeed_scraper.search_jobs(keywords, location, max_pages=2)
-        print(f"✅ Found {len(indeed_jobs)} Indeed jobs\n")
+        # 2. Scrape LinkedIn directly (works on Railway) - for additional LinkedIn jobs
+        if self.linkedin_scraper:
+            print("📘 Scraping LinkedIn directly...")
+            linkedin_jobs = self.linkedin_scraper.search_jobs(keywords, location, max_pages=3)
+            print(f"✅ Found {len(linkedin_jobs)} LinkedIn jobs\n")
+            
+            # Fetch full descriptions for LinkedIn jobs (JSearch already has descriptions)
+            if linkedin_jobs:
+                print(f"📄 Fetching full descriptions for LinkedIn jobs...")
+                for idx, job in enumerate(linkedin_jobs, 1):
+                    try:
+                        if idx <= 10:  # Limit to first 10 to avoid timeout
+                            print(f"  [{idx}/{min(len(linkedin_jobs), 10)}] Fetching: {job['title'][:50]}...")
+                            details = self.linkedin_scraper.get_job_details(job['url'])
+                            if details.get('description'):
+                                job['description'] = details['description']
+                            if details.get('job_type') and not job.get('job_type'):
+                                job['job_type'] = details['job_type']
+                            time.sleep(1)  # Brief delay
+                    except Exception as e:
+                        print(f"  ⚠️ Error fetching details: {e}")
+                print(f"✅ LinkedIn descriptions fetched\n")
+            
+            all_jobs.extend(linkedin_jobs)
         
-        # Fetch full descriptions for Indeed jobs
-        if indeed_jobs:
-            print(f"📄 Fetching full descriptions for Indeed jobs...")
-            for idx, job in enumerate(indeed_jobs, 1):
-                try:
-                    print(f"  [{idx}/{len(indeed_jobs)}] Fetching: {job['title'][:50]}...")
-                    details = self.indeed_scraper.get_job_details(job['url'])
-                    if details.get('description'):
-                        job['description'] = details['description']
-                    if details.get('job_type') and not job.get('job_type'):
-                        job['job_type'] = details['job_type']
-                    time.sleep(3)  # Longer delay for Indeed (anti-bot protection)
-                except Exception as e:
-                    print(f"  ⚠️ Error fetching details: {e}")
-            print(f"✅ Indeed descriptions fetched\n")
+        # 3. Scrape with Selenium Indeed (only works locally, not on Railway)
+        if self.indeed_scraper:
+            print("🔵 Scraping Indeed with Selenium (local only)...")
+            indeed_jobs = self.indeed_scraper.search_jobs(keywords, location, max_pages=2)
+            print(f"✅ Found {len(indeed_jobs)} Indeed jobs\n")
+            
+            # Fetch full descriptions for Indeed jobs
+            if indeed_jobs:
+                print(f"📄 Fetching full descriptions for Indeed jobs...")
+                for idx, job in enumerate(indeed_jobs, 1):
+                    try:
+                        if idx <= 10:  # Limit to first 10
+                            print(f"  [{idx}/{min(len(indeed_jobs), 10)}] Fetching: {job['title'][:50]}...")
+                            details = self.indeed_scraper.get_job_details(job['url'])
+                            if details.get('description'):
+                                job['description'] = details['description']
+                            if details.get('job_type'):
+                                job['job_type'] = details['job_type']
+                            time.sleep(2)
+                    except Exception as e:
+                        print(f"  ⚠️ Error fetching details: {e}")
+                print(f"✅ Indeed descriptions fetched\n")
+            
+            all_jobs.extend(indeed_jobs)
         
-        all_jobs = linkedin_jobs + indeed_jobs
         new_jobs_count = 0
         
         print(f"💾 Storing jobs in database...")
