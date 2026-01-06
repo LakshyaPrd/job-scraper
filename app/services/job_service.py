@@ -1,20 +1,43 @@
 from typing import List, Dict
 from datetime import datetime
 import time
-from app.scrapers.linkedin_scraper import LinkedInScraper
-from app.scrapers.indeed_scraper import IndeedScraper
+
+# Make scrapers optional - they won't work in Railway without Chrome/display
+try:
+    from app.scrapers.linkedin_scraper import LinkedInScraper
+    from app.scrapers.indeed_scraper import IndeedScraper
+    SCRAPERS_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Warning: Scrapers not available - {e}")
+    LinkedInScraper = None
+    IndeedScraper = None
+    SCRAPERS_AVAILABLE = False
+
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 class JobService:
     def __init__(self, db: AsyncIOMotorDatabase, use_brave: bool = True):
         self.db = db
-        self.linkedin_scraper = LinkedInScraper()
-        # Use Brave browser for Indeed (better anti-detection than Chrome)
-        self.indeed_scraper = IndeedScraper(use_brave=use_brave)
         self.collection = db.jobs
+        
+        # Initialize scrapers only if available
+        if SCRAPERS_AVAILABLE and LinkedInScraper:
+            self.linkedin_scraper = LinkedInScraper()
+        else:
+            self.linkedin_scraper = None
+            
+        if SCRAPERS_AVAILABLE and IndeedScraper:
+            self.indeed_scraper = IndeedScraper(use_brave=use_brave)
+        else:
+            self.indeed_scraper = None
+            print("ℹ️ Running without scraper support (API-only mode)")
     
     async def scrape_and_store_jobs(self, keywords: str, location: str = ""):
         """Scrape jobs from multiple platforms and store in DB"""
+        if not self.linkedin_scraper and not self.indeed_scraper:
+            print("⚠️ Scraping not available in this environment (no Selenium/Chrome support)")
+            return 0
+            
         print(f"\n{'='*60}")
         print(f"🔍 Starting scrape for: {keywords} in {location or 'Remote'}")
         print(f"{'='*60}\n")
