@@ -135,9 +135,15 @@ class JobService:
             all_jobs.extend(indeed_jobs)
         
         new_jobs_count = 0
+        skipped_no_description = 0
         
         print(f"💾 Storing jobs in database...")
         for job in all_jobs:
+            # Skip jobs without descriptions
+            if not job.get('description') or len(job.get('description', '').strip()) < 50:
+                skipped_no_description += 1
+                continue
+            
             existing = await self.collection.find_one({'job_id': job['job_id']})
             
             if not existing:
@@ -161,19 +167,24 @@ class JobService:
         
         print(f"\n{'='*60}")
         print(f"✅ Stored {new_jobs_count} new jobs in category: {search_category}")
+        print(f"ℹ️  Skipped {skipped_no_description} jobs without descriptions")
         print(f"📊 Total jobs found: {len(all_jobs)}")
         print(f"{'='*60}\n")
         return new_jobs_count
     
     async def get_active_jobs(self, skip: int = 0, limit: int = 100):
-        """Get all active jobs"""
-        # Sort by created_at (always set) instead of posted_date (can be None)
-        cursor = self.collection.find(
-            {'is_active': True}
-        ).sort('created_at', -1).skip(skip).limit(limit)
+        """Get all active jobs with descriptions"""
+        # Filter for active jobs that have descriptions
+        cursor = self.collection.find({
+            'is_active': True,
+            'description': {'$exists': True, '$ne': '', '$ne': None}
+        }).sort('created_at', -1).skip(skip).limit(limit)
         
         jobs = await cursor.to_list(length=limit)
-        total = await self.collection.count_documents({'is_active': True})
+        total = await self.collection.count_documents({
+            'is_active': True,
+            'description': {'$exists': True, '$ne': '', '$ne': None}
+        })
         
         # Convert ObjectId and dates to string
         for job in jobs:
@@ -228,10 +239,11 @@ class JobService:
         return expired_count
     
     async def search_jobs_by_role(self, role: str, location: str = ""):
-        """Search jobs by role in database"""
+        """Search jobs by role in database (with descriptions only)"""
         query = {
             'is_active': True,
-            'title': {'$regex': role, '$options': 'i'}
+            'title': {'$regex': role, '$options': 'i'},
+            'description': {'$exists': True, '$ne': '', '$ne': None}
         }
         
         if location:
@@ -258,8 +270,11 @@ class JobService:
         return sorted([c for c in categories if c])
     
     async def get_jobs_by_category(self, category: str, skip: int = 0, limit: int = 100):
-        """Get jobs by search category"""
-        query = {'is_active': True}
+        """Get jobs by search category (with descriptions only)"""
+        query = {
+            'is_active': True,
+            'description': {'$exists': True, '$ne': '', '$ne': None}
+        }
         if category and category != 'All':
             query['search_category'] = category
         
