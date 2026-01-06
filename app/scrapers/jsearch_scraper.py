@@ -150,16 +150,44 @@ class JSearchScraper:
             else:
                 posted_date = datetime.utcnow()
             
-            # Get job source (Indeed, LinkedIn, etc.)
-            source = job_data.get('job_publisher', 'jsearch').lower()
-            if 'indeed' in source:
+            # Get job source (Indeed, LinkedIn, Glassdoor, etc.) - check multiple fields
+            source = 'unknown'
+            
+            # Method 1: Check job_publisher field
+            publisher = job_data.get('job_publisher', '').lower()
+            
+            # Method 2: Check apply link URL
+            apply_link = job_data.get('job_apply_link', '').lower()
+            
+            # Method 3: Check job URL if exists  
+            job_url = job_data.get('job_google_link', '').lower()
+            
+            # Determine source with priority: apply_link > publisher > job_url
+            combined_check = f"{publisher} {apply_link} {job_url}"
+            
+            if 'indeed' in combined_check:
                 source = 'indeed'
-            elif 'linkedin' in source:
+            elif 'linkedin' in combined_check:
                 source = 'linkedin'
-            elif 'glassdoor' in source:
+            elif 'glassdoor' in combined_check:
                 source = 'glassdoor'
+            elif 'ziprecruiter' in combined_check:
+                source = 'ziprecruiter'
+            elif 'monster' in combined_check:
+                source = 'monster'
+            elif 'dice' in combined_check:
+                source = 'dice'
+            elif 'careerbuilder' in combined_check:
+                source = 'careerbuilder'
             else:
-                source = 'jsearch'
+                # If we still can't determine, use publisher or default
+                if publisher and publisher != 'jsearch':
+                    source = publisher.split('.')[0]  # Get first part of domain
+                else:
+                    source = 'other'
+            
+            # Debug: Print source detection (remove after testing)
+            # print(f"  🔍 Source detected: {source} (from publisher: {publisher[:30]}...)")
             
             return {
                 'job_id': f"{source}_{job_data.get('job_id', '')}",
