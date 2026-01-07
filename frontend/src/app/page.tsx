@@ -95,10 +95,14 @@ export default function Home() {
     setFilteredJobs(filtered);
   }, [allJobs]);
 
+
   const handleSearch = async (role: string, location: string) => {
     if (!role.trim()) return;
     setSearching(true);
     setError('');
+    
+    const initialJobCount = allJobs.length;
+    
     try {
       const scrapeResponse = await fetch(`${API_URL}/api/scrape`, {
         method: 'POST',
@@ -119,9 +123,39 @@ export default function Home() {
       }
       saveSearchHistory(newHistory);
       
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      await fetchAllJobs();
-      filterJobs(role.trim());
+      // Poll for new jobs instead of fixed wait
+      let attempts = 0;
+      const maxAttempts = 30; // 30 attempts * 3 seconds = 90 seconds max
+      let hasNewJobs = false;
+      
+      while (attempts < maxAttempts && !hasNewJobs) {
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds between checks
+        
+        // Fetch jobs to check if new ones arrived
+        const response = await fetch(`${API_URL}/api/jobs?limit=1000&date_filter=${dateFilter}`);
+        if (response.ok) {
+          const data = await response.json();
+          const currentJobCount = data.jobs?.length || 0;
+          
+          // Check if we got new jobs
+          if (currentJobCount > initialJobCount) {
+            hasNewJobs = true;
+            setAllJobs(data.jobs || []);
+            setFilteredJobs(data.jobs || []);
+            filterJobs(role.trim());
+            break;
+          }
+        }
+        
+        attempts++;
+      }
+      
+      // Final fetch after timeout or success
+      if (!hasNewJobs) {
+        await fetchAllJobs();
+        filterJobs(role.trim());
+      }
+      
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error(err);
