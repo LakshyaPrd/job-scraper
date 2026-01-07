@@ -172,19 +172,43 @@ class JobService:
         print(f"{'='*60}\n")
         return new_jobs_count
     
-    async def get_active_jobs(self, skip: int = 0, limit: int = 100):
-        """Get all active jobs with descriptions"""
-        # Filter for active jobs that have descriptions
-        cursor = self.collection.find({
+    async def get_active_jobs(self, skip: int = 0, limit: int = 100, date_filter: str = "all"):
+        """
+        Get all active jobs with descriptions
+        
+        Args:
+            skip: Number of jobs to skip
+            limit: Number of jobs to return
+            date_filter: Filter by date - 'today', 'yesterday', 'week', 'all'
+        """
+        from datetime import datetime, timedelta
+        
+        # Build base query
+        query = {
             'is_active': True,
             'description': {'$exists': True, '$ne': '', '$ne': None}
-        }).sort('created_at', -1).skip(skip).limit(limit)
+        }
+        
+        # Add date filter
+        if date_filter == "today":
+            # Jobs scraped today (since midnight UTC)
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            query['created_at'] = {'$gte': today_start}
+        elif date_filter == "yesterday":
+            # Jobs scraped yesterday
+            yesterday_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            query['created_at'] = {'$gte': yesterday_start, '$lt': today_start}
+        elif date_filter == "week":
+            # Jobs scraped in the last 7 days
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            query['created_at'] = {'$gte': week_ago}
+        # If "all", no date filter is applied
+        
+        cursor = self.collection.find(query).sort('created_at', -1).skip(skip).limit(limit)
         
         jobs = await cursor.to_list(length=limit)
-        total = await self.collection.count_documents({
-            'is_active': True,
-            'description': {'$exists': True, '$ne': '', '$ne': None}
-        })
+        total = await self.collection.count_documents(query)
         
         # Convert ObjectId and dates to string
         for job in jobs:

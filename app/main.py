@@ -62,9 +62,13 @@ async def trigger_scrape(
     return {"message": "Scraping started in background", "role": search.role}
 
 @app.get("/api/jobs", response_model=JobResponse)
-async def get_jobs(skip: int = 0, limit: int = 100):
-    """Get all active jobs"""
-    jobs, total = await app.state.job_service.get_active_jobs(skip, limit)
+async def get_jobs(
+    skip: int = 0, 
+    limit: int = 100,
+    date_filter: str = Query("all", description="Filter by date: 'today', 'yesterday', 'week', 'all'")
+):
+    """Get all active jobs with optional date filtering"""
+    jobs, total = await app.state.job_service.get_active_jobs(skip, limit, date_filter)
     
     # Count new jobs (posted in last 24 hours)
     from datetime import datetime, timedelta
