@@ -34,6 +34,7 @@ export default function Home() {
   const [searching, setSearching] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week'>('all');
   const [error, setError] = useState('');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -57,7 +58,7 @@ export default function Home() {
   const fetchAllJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/jobs?limit=1000`);
+      const response = await fetch(`${API_URL}/api/jobs?limit=1000&date_filter=${dateFilter}`);
       if (!response.ok) throw new Error('Failed to fetch jobs');
       const data = await response.json();
       setAllJobs(data.jobs || []);
@@ -69,7 +70,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [API_URL]);
+  }, [API_URL, dateFilter]);
 
   useEffect(() => {
     fetchAllJobs();
@@ -147,6 +148,55 @@ export default function Home() {
         </div>
 
         <SearchBar onSearch={handleSearch} isSearching={searching} />
+
+        {/* Date Filter Tabs */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Filter by Date Scraped</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setDateFilter('all')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                dateFilter === 'all'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All Jobs
+            </button>
+            <button
+              onClick={() => setDateFilter('today')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                dateFilter === 'today'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📅 Today
+            </button>
+            <button
+              onClick={() => setDateFilter('yesterday')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                dateFilter === 'yesterday'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📅 Yesterday
+            </button>
+            <button
+              onClick={() => setDateFilter('week')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                dateFilter === 'week'
+                  ? 'bg-green-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📅 This Week
+            </button>
+          </div>
+        </div>
 
         {searchHistory.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
