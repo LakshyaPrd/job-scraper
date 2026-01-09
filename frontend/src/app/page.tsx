@@ -61,6 +61,7 @@ export default function Home() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+  // Load persisted state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('jobSearchHistory');
     if (saved) {
@@ -70,7 +71,29 @@ export default function Home() {
         setSearchHistory([]);
       }
     }
+    
+    // Restore date filter
+    const savedDateFilter = localStorage.getItem('dateFilter');
+    if (savedDateFilter && ['all', 'today', 'yesterday', 'week'].includes(savedDateFilter)) {
+      setDateFilter(savedDateFilter as 'all' | 'today' | 'yesterday' | 'week');
+    }
+    
+    // Restore view mode
+    const savedViewMode = localStorage.getItem('viewMode');
+    if (savedViewMode && ['jobs', 'companies'].includes(savedViewMode)) {
+      setViewMode(savedViewMode as 'jobs' | 'companies');
+    }
   }, []);
+
+  // Persist date filter to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('dateFilter', dateFilter);
+  }, [dateFilter]);
+
+  // Persist view mode to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('viewMode', viewMode);
+  }, [viewMode]);
 
   const saveSearchHistory = (history: SearchHistoryItem[]) => {
     localStorage.setItem('jobSearchHistory', JSON.stringify(history));
@@ -230,150 +253,207 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-gray-900 mb-3">Job Finder</h1>
-          <p className="text-gray-600 text-lg">Search for jobs and filter by category</p>
+      <div className="container mx-auto px-4 py-6 max-w-[1800px]">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Job Scraper for Recruiters</h1>
+          <p className="text-gray-600">Platform selection • Smart pagination • Company insights</p>
         </div>
 
-        <SearchBar onSearch={handleSearch} isSearching={searching} />
-
-        {/* Platform Selection */}
-        <PlatformSelector 
-          selectedPlatforms={selectedPlatforms}
-          onChange={setSelectedPlatforms}
-        />
-
-        {/* Job Count and Continue Option */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap items-center gap-6">
-            <JobCountSelector maxJobs={maxJobs} onChange={setMaxJobs} />
-          </div>
+        {/* Search Bar at Top */}
+        <div className="mb-6">
+          <SearchBar onSearch={handleSearch} isSearching={searching} />
         </div>
 
-        {/* Continue from Last Scrape Option */}
-        {currentSearchRole && (
-          <ContinueOption
-            searchRole={currentSearchRole}
-            searchLocation={currentSearchLocation}
-            continueFromLast={continueFromLast}
-            onChange={setContinueFromLast}
-            apiUrl={API_URL}
-          />
-        )}
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT SIDEBAR - Filters & Controls */}
+          <div className="lg:col-span-3 space-y-4">
+            {/* Platform Selection */}
+            <PlatformSelector 
+              selectedPlatforms={selectedPlatforms}
+              onChange={setSelectedPlatforms}
+            />
 
-        {/* View Toggle */}
-        <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-
-        {/* Date Filter Tabs */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-700">Filter by Date Scraped</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setDateFilter('all')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                dateFilter === 'all'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              All Jobs
-            </button>
-            <button
-              onClick={() => setDateFilter('today')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                dateFilter === 'today'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📅 Today
-            </button>
-            <button
-              onClick={() => setDateFilter('yesterday')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                dateFilter === 'yesterday'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📅 Yesterday
-            </button>
-            <button
-              onClick={() => setDateFilter('week')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                dateFilter === 'week'
-                  ? 'bg-green-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              📅 This Week
-            </button>
-          </div>
-        </div>
-
-        {searchHistory.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">Your Searches</h3>
-              <button onClick={() => { saveSearchHistory([]); filterJobs(null); }} className="text-xs text-red-500 hover:text-red-700">Clear All</button>
+            {/* Job Count */}
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <JobCountSelector maxJobs={maxJobs} onChange={setMaxJobs} />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => filterJobs(null)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === null ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                All Jobs ({allJobs.length})
-              </button>
-              {searchHistory.map((item) => {
-                const matchCount = allJobs.filter(job => {
-                  const words = item.query.toLowerCase().split(/\s+/);
-                  return words.some(w => job.title.toLowerCase().includes(w) || (job.search_category || '').toLowerCase().includes(w));
-                }).length;
-                return (
-                  <div key={item.query} className="relative group">
-                    <button onClick={() => filterJobs(item.query)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === item.query ? 'bg-blue-600 text-white' : 'bg-purple-100 text-gray-700 hover:bg-purple-200'}`}>
-                      {item.query} <span className="ml-1 text-xs opacity-75">({matchCount})</span>
-                    </button>
-                    <button onClick={() => handleDeleteSearch(item.query)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity">x</button>
+
+            {/* Continue from Last */}
+            {currentSearchRole && (
+              <ContinueOption
+                searchRole={currentSearchRole}
+                searchLocation={currentSearchLocation}
+                continueFromLast={continueFromLast}
+                onChange={setContinueFromLast}
+                apiUrl={API_URL}
+              />
+            )}
+
+            {/* View Toggle */}
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+
+            {/* Date Filter */}
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">📅 Filter by Date</h3>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setDateFilter('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                    dateFilter === 'all'
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Jobs
+                </button>
+                <button
+                  onClick={() => setDateFilter('today')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                    dateFilter === 'today'
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📅 Today
+                </button>
+                <button
+                  onClick={() => setDateFilter('yesterday')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                    dateFilter === 'yesterday'
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📅 Yesterday
+                </button>
+                <button
+                  onClick={() => setDateFilter('week')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                    dateFilter === 'week'
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  📅 This Week
+                </button>
+              </div>
+            </div>
+
+            {/* Search History */}
+            {searchHistory.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700">Your Searches</h3>
+                  <button 
+                    onClick={() => { saveSearchHistory([]); filterJobs(null); }} 
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={() => filterJobs(null)} 
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                      activeFilter === null 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    All Jobs ({allJobs.length})
+                  </button>
+                  {searchHistory.map((item) => {
+                    const matchCount = allJobs.filter(job => {
+                      const words = item.query.toLowerCase().split(/\s+/);
+                      return words.some(w => 
+                        job.title.toLowerCase().includes(w) || 
+                        (job.search_category || '').toLowerCase().includes(w)
+                      );
+                    }).length;
+                    return (
+                      <div key={item.query} className="relative group">
+                        <button 
+                          onClick={() => filterJobs(item.query)} 
+                          className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
+                            activeFilter === item.query 
+                              ? 'bg-blue-600 text-white' 
+                              : 'bg-purple-100 text-gray-700 hover:bg-purple-200'
+                          }`}
+                        >
+                          {item.query} <span className="text-xs opacity-75">({matchCount})</span>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteSearch(item.query)} 
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT PANEL - Results */}
+          <div className="lg:col-span-9">
+            {/* Stats Bar */}
+            <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+              <div className="flex flex-wrap justify-between items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {viewMode === 'companies' ? companies.length : filteredJobs.length}
+                  </span>
+                  <span className="text-gray-600">
+                    {viewMode === 'companies' 
+                      ? 'Companies Hiring' 
+                      : activeFilter ? `Jobs matching "${activeFilter}"` : 'Total Jobs'
+                    }
+                  </span>
+                </div>
+                {viewMode === 'jobs' && (
+                  <div className="flex items-center gap-4">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      LinkedIn: {linkedinCount}
+                    </span>
+                    <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                      Indeed: {indeedCount}
+                    </span>
                   </div>
-                );
-              })}
+                )}
+              </div>
             </div>
-          </div>
-        )}
 
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap justify-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900">{filteredJobs.length}</span>
-              <span className="text-gray-600">{activeFilter ? `Jobs matching "${activeFilter}"` : 'Total Jobs'}</span>
-            </div>
-            <div className="h-8 w-px bg-gray-200 hidden sm:block"></div>
-            <div className="flex items-center gap-4">
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">LinkedIn: {linkedinCount}</span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">Indeed: {indeedCount}</span>
-            </div>
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                {error}
+              </div>
+            )}
+
+            {/* Searching Status */}
+            {searching && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                <span>Scraping jobs... This may take 30-60 seconds</span>
+              </div>
+            )}
+
+            {/* Results - Conditional rendering based on view mode */}
+            {viewMode === 'companies' ? (
+              <CompanyList companies={companies} loading={loading} />
+            ) : (
+              <JobTable jobs={filteredJobs} loading={loading} />
+            )}
           </div>
         </div>
-
-        {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">{error}</div>}
-
-        {searching && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-6 flex items-center gap-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
-            <span>Scraping jobs... Check the Brave/Chrome window if CAPTCHA appears!</span>
-          </div>
-        )}
-
-        {/* Conditional rendering based on view mode */}
-        {viewMode === 'companies' ? (
-          <CompanyList companies={companies} loading={loading} />
-        ) : (
-          <JobTable jobs={filteredJobs} loading={loading} />
-        )}
       </div>
+      
       <footer className="text-center py-6 text-gray-500 text-sm">
-        <p>Data from LinkedIn and Indeed • Full job descriptions included</p>
+        <p>Professional Recruiter Tool • Data from LinkedIn, Indeed, Glassdoor</p>
       </footer>
     </main>
   );

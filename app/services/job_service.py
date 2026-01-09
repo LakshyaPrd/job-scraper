@@ -35,6 +35,14 @@ class JobService:
         self.db = db
         self.collection = db.jobs
         
+        # Initialize JSearch scraper FIRST (works everywhere - API-based)
+        if JSEARCH_AVAILABLE and JSearchScraper:
+            self.jsearch_scraper = JSearchScraper()
+            print("✅ JSearch API scraper initialized (primary)")
+        else:
+            self.jsearch_scraper = None
+            print("ℹ️ JSearch API scraper not available")
+        
         # Initialize LinkedIn scraper (works on Railway - uses requests only)
         if LINKEDIN_AVAILABLE and LinkedInScraper:
             self.linkedin_scraper = LinkedInScraper()
@@ -42,21 +50,16 @@ class JobService:
         else:
             self.linkedin_scraper = None
             print("ℹ️ LinkedIn scraper not available")
-        
-        # Initialize JSearch scraper (works on Railway - API-based)
-        if JSEARCH_AVAILABLE and JSearchScraper:
-            self.jsearch_scraper = JSearchScraper()
-            print("✅ JSearch API scraper initialized")
-        else:
-            self.jsearch_scraper = None
-            print("ℹ️ JSearch API scraper not available")
             
-        # Initialize Selenium Indeed scraper (only works locally)
-        if INDEED_SELENIUM_AVAILABLE and IndeedScraper:
+        # Initialize Selenium Indeed scraper LAST (only as fallback if no API key)
+        # Since user has RAPIDAPI_KEY, this won't be needed
+        if INDEED_SELENIUM_AVAILABLE and IndeedScraper and not self.jsearch_scraper:
             self.indeed_scraper = IndeedScraper(use_brave=use_brave)
-            print("✅ Indeed Selenium scraper initialized (local only)")
+            print("✅ Indeed Selenium scraper initialized (fallback only)")
         else:
             self.indeed_scraper = None
+            if self.jsearch_scraper:
+                print("ℹ️ Selenium scraper skipped - JSearch API available")
         
         # Check if we have at least one scraper
         if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
