@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import JobTable from '@/components/JobTable';
 import SearchBar from '@/components/SearchBar';
+import PlatformSelector from '@/components/PlatformSelector';
+import JobCountSelector from '@/components/JobCountSelector';
+import ContinueOption from '@/components/ContinueOption';
+import ViewToggle from '@/components/ViewToggle';
+import CompanyList from '@/components/CompanyList';
 
 interface Job {
   _id: string;
@@ -27,15 +32,32 @@ interface SearchHistoryItem {
   timestamp: number;
 }
 
+interface Company {
+  company_name: string;
+  total_jobs: number;
+  latest_job_date: string;
+  job_titles: string[];
+  locations: string[];
+}
+
 export default function Home() {
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week'>('all');
   const [error, setError] = useState('');
+  
+  // New states for recruiter features
+  const [viewMode, setViewMode] = useState<'jobs' | 'companies'>('jobs');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['linkedin', 'jsearch']);
+  const [maxJobs, setMaxJobs] = useState(100);
+  const [continueFromLast, setContinueFromLast] = useState(false);
+  const [currentSearchRole, setCurrentSearchRole] = useState('');
+  const [currentSearchLocation, setCurrentSearchLocation] = useState('');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 

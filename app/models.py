@@ -22,7 +22,19 @@ class JobPosting(BaseModel):
 
 class SearchRequest(BaseModel):
     role: str
-    location: Optional[str] = None
+    location: Optional[str] = ""
+    platforms: List[str] = Field(default=["linkedin", "jsearch"])
+    max_jobs: int = Field(default=100)
+    continue_from_last: bool = Field(default=False)
+
+class FilterRequest(BaseModel):
+    min_salary: Optional[int] = None
+    max_salary: Optional[int] = None
+    job_types: Optional[List[str]] = None
+    locations: Optional[List[str]] = None
+    sources: Optional[List[str]] = None
+    remote_only: bool = False
+    date_filter: str = "all"
     
 class JobResponse(BaseModel):
     jobs: list
@@ -31,3 +43,7 @@ class JobResponse(BaseModel):
 
 class CategoriesResponse(BaseModel):
     categories: List[str]
+
+class CompanyResponse(BaseModel):
+    companies: list
+    total: int

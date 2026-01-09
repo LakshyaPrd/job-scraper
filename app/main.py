@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import connect_to_mongo, close_mongo_connection, get_database
 from app.config import settings
-from app.models import SearchRequest, JobResponse, CategoriesResponse
+from app.models import SearchRequest, JobResponse, CategoriesResponse, FilterRequest
+from app.routers import companies
 from app.services.job_service import JobService
 from app.scheduler import scheduler
 
@@ -33,6 +34,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Register routers
+app.include_router(companies.router)
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -55,11 +59,14 @@ async def trigger_scrape(
     async def scrape_task():
         await app.state.job_service.scrape_and_store_jobs(
             search.role,
-            search.location or ""
+            search.location or "",
+            search.platforms,
+            search.max_jobs,
+            search.continue_from_last
         )
     
     background_tasks.add_task(scrape_task)
-    return {"message": "Scraping started in background", "role": search.role}
+    return {"message": "Scraping started in background", "role": search.role, "platforms": search.platforms, "max_jobs": search.max_jobs}
 
 @app.get("/api/jobs", response_model=JobResponse)
 async def get_jobs(
@@ -145,6 +152,40 @@ async def get_job_by_id(job_id: str):
         return job
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/jobs/filter")
+async def filter_jobs(
+    min_salary: int = None,
+    max_salary: int = None,
+    job_types: str = None,
+    locations: str = None,
+    sources: str = None,
+    remote_only: bool = False,
+    date_filter: str = "all"
+):
+    """Filter jobs based on various criteria"""
+    job_types_list = job_types.split(",") if job_types else None
+    locations_list = locations.split(",") if locations else None
+    sources_list = sources.split(",") if sources else None
+    
+    result = await app.state.job_service.filter_jobs(
+        min_salary=min_salary,
+        max_salary=max_salary,
+        job_types=job_types_list,
+        locations=locations_list,
+        sources=sources_list,
+        remote_only=remote_only,
+        date_filter=date_filter
+    )
+    return result
+
+@app.get("/api/search/metadata/{search_key}")
+async def get_search_metadata(search_key: str):
+    """Get metadata for a search query to enable pagination"""
+    metadata = await app.state.job_service.get_search_metadata(search_key)
+    if not metadata:
+        return {"search_key": search_key, "last_offset": 0, "total_scraped": 0}
+    return metadata
 
 if __name__ == "__main__":
     import uvicorn

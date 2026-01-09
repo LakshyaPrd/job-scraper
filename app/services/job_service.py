@@ -62,77 +62,114 @@ class JobService:
         if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
             print("⚠️ Running in API-only mode (no scrapers available)")
     
-    async def scrape_and_store_jobs(self, keywords: str, location: str = ""):
-        """Scrape jobs from multiple platforms and store in DB"""
+    async def scrape_and_store_jobs(
+        self, 
+        keywords: str, 
+        location: str = "",
+        platforms: List[str] = None,
+        max_jobs: int = 100,
+        continue_from_last: bool = False
+    ):
+        """Scrape jobs from selected platforms with job limit and pagination support"""
         if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
             print("⚠️ Scraping not available in this environment (no scrapers configured)")
             return 0
+        
+        # Default platforms if none specified
+        if platforms is None:
+            platforms = []
+            if self.linkedin_scraper:
+                platforms.append("linkedin")
+            if self.jsearch_scraper:
+                platforms.append("jsearch")
             
         print(f"\n{'='*60}")
         print(f"🔍 Starting scrape for: {keywords} in {location or 'Remote'}")
+        print(f"📊 Platforms: {', '.join(platforms)}")
+        print(f"🎯 Max jobs: {max_jobs}")
         print(f"{'='*60}\n")
         
-        # Normalize the search category (e.g., "spring boot developer" -> "Spring Boot")
+        # Normalize the search category
         search_category = keywords.strip().title()
+        search_key = f"{keywords}_{location}".lower().replace(" ", "_")
+        
+        # Get offset if continuing from last
+        offset = 0
+        if continue_from_last:
+            search_metadata_col = self.db.search_metadata
+            metadata = await search_metadata_col.find_one({"search_key": search_key})
+            if metadata:
+                offset = metadata.get("last_offset", 0)
+                print(f"▶️  Continuing from job #{offset + 1}\n")
         
         all_jobs = []
+        jobs_needed = max_jobs
         
-        # 1. Scrape with JSearch API (works on Railway) - gives Indeed + LinkedIn + Glassdoor
-        if self.jsearch_scraper:
+        # Calculate jobs per platform
+        active_platforms = [p for p in platforms if p in ["linkedin", "jsearch", "indeed"]]
+        jobs_per_platform = max_jobs // len(active_platforms) if active_platforms else max_jobs
+        
+        # 1. Scrape with JSearch API if selected
+        if "jsearch" in platforms and self.jsearch_scraper and jobs_needed > 0:
             print("🚀 Scraping with JSearch API (Indeed, LinkedIn, Glassdoor, etc.)...")
-            jsearch_jobs = self.jsearch_scraper.search_jobs(keywords, location, max_pages=2)
+            pages_needed = min((jobs_per_platform // 10) + 1, 10)
+            jsearch_jobs = self.jsearch_scraper.search_jobs(keywords, location, max_pages=pages_needed)
+            jsearch_jobs = jsearch_jobs[:min(len(jsearch_jobs), jobs_per_platform)]
             all_jobs.extend(jsearch_jobs)
+            jobs_needed -= len(jsearch_jobs)
             print(f"✅ Found {len(jsearch_jobs)} jobs from JSearch API\n")
         
-        # 2. Scrape LinkedIn directly (works on Railway) - for additional LinkedIn jobs
-        if self.linkedin_scraper:
+        # 2. Scrape LinkedIn directly if selected
+        if "linkedin" in platforms and self.linkedin_scraper and jobs_needed > 0:
             print("📘 Scraping LinkedIn directly...")
-            linkedin_jobs = self.linkedin_scraper.search_jobs(keywords, location, max_pages=3)
-            print(f"✅ Found {len(linkedin_jobs)} LinkedIn jobs\n")
+            pages_needed = min((jobs_per_platform // 25) + 1, 10)
+            linkedin_jobs = self.linkedin_scraper.search_jobs(keywords, location, max_pages=pages_needed)
+            linkedin_jobs = linkedin_jobs[:min(len(linkedin_jobs), jobs_per_platform)]
             
-            # Fetch full descriptions for LinkedIn jobs (JSearch already has descriptions)
+            # Fetch descriptions for limited jobs
             if linkedin_jobs:
-                print(f"📄 Fetching full descriptions for LinkedIn jobs...")
-                for idx, job in enumerate(linkedin_jobs, 1):
+                print(f"📄 Fetching descriptions for LinkedIn jobs (max {min(len(linkedin_jobs), 10)})...")
+                for idx, job in enumerate(linkedin_jobs[:10], 1):
                     try:
-                        if idx <= 10:  # Limit to first 10 to avoid timeout
-                            print(f"  [{idx}/{min(len(linkedin_jobs), 10)}] Fetching: {job['title'][:50]}...")
-                            details = self.linkedin_scraper.get_job_details(job['url'])
-                            if details.get('description'):
-                                job['description'] = details['description']
-                            if details.get('job_type') and not job.get('job_type'):
-                                job['job_type'] = details['job_type']
-                            time.sleep(1)  # Brief delay
+                        print(f"  [{idx}/{min(len(linkedin_jobs), 10)}] {job['title'][:40]}...")
+                        details = self.linkedin_scraper.get_job_details(job['url'])
+                        if details.get('description'):
+                            job['description'] = details['description']
+                        time.sleep(1)
                     except Exception as e:
-                        print(f"  ⚠️ Error fetching details: {e}")
+                        print(f"  ⚠️ Error: {e}")
                 print(f"✅ LinkedIn descriptions fetched\n")
             
             all_jobs.extend(linkedin_jobs)
+            jobs_needed -= len(linkedin_jobs)
+            print(f"✅ Found {len(linkedin_jobs)} LinkedIn jobs\n")
         
-        # 3. Scrape with Selenium Indeed (only works locally, not on Railway)
-        if self.indeed_scraper:
+        # 3. Scrape with Selenium Indeed if selected (local only)
+        if "indeed" in platforms and self.indeed_scraper and jobs_needed > 0:
             print("🔵 Scraping Indeed with Selenium (local only)...")
-            indeed_jobs = self.indeed_scraper.search_jobs(keywords, location, max_pages=2)
-            print(f"✅ Found {len(indeed_jobs)} Indeed jobs\n")
+            pages_needed = min((jobs_per_platform // 15) + 1, 5)
+            indeed_jobs = self.indeed_scraper.search_jobs(keywords, location, max_pages=pages_needed)
+            indeed_jobs = indeed_jobs[:min(len(indeed_jobs), jobs_per_platform)]
             
-            # Fetch full descriptions for Indeed jobs
             if indeed_jobs:
-                print(f"📄 Fetching full descriptions for Indeed jobs...")
-                for idx, job in enumerate(indeed_jobs, 1):
+                print(f"📄 Fetching descriptions for Indeed jobs (max {min(len(indeed_jobs), 10)})...")
+                for idx, job in enumerate(indeed_jobs[:10], 1):
                     try:
-                        if idx <= 10:  # Limit to first 10
-                            print(f"  [{idx}/{min(len(indeed_jobs), 10)}] Fetching: {job['title'][:50]}...")
-                            details = self.indeed_scraper.get_job_details(job['url'])
-                            if details.get('description'):
-                                job['description'] = details['description']
-                            if details.get('job_type'):
-                                job['job_type'] = details['job_type']
-                            time.sleep(2)
+                        print(f"  [{idx}/{min(len(indeed_jobs), 10)}] {job['title'][:40]}...")
+                        details = self.indeed_scraper.get_job_details(job['url'])
+                        if details.get('description'):
+                            job['description'] = details['description']
+                        time.sleep(2)
                     except Exception as e:
-                        print(f"  ⚠️ Error fetching details: {e}")
+                        print(f"  ⚠️ Error: {e}")
                 print(f"✅ Indeed descriptions fetched\n")
             
             all_jobs.extend(indeed_jobs)
+            jobs_needed -= len(indeed_jobs)
+            print(f"✅ Found {len(indeed_jobs)} Indeed jobs\n")
+        
+        # Limit to max_jobs
+        all_jobs = all_jobs[:max_jobs]
         
         new_jobs_count = 0
         skipped_no_description = 0
@@ -147,17 +184,13 @@ class JobService:
             existing = await self.collection.find_one({'job_id': job['job_id']})
             
             if not existing:
-                # Add search category to new jobs
                 job['search_category'] = search_category
                 await self.collection.insert_one(job)
                 new_jobs_count += 1
             else:
-                # Update last_verified and add to category if not already
                 update_data = {'last_verified': datetime.utcnow()}
-                # Add category if job doesn't have one
                 if not existing.get('search_category'):
                     update_data['search_category'] = search_category
-                # Update description if we have a new one and old one is missing
                 if job.get('description') and not existing.get('description'):
                     update_data['description'] = job['description']
                 await self.collection.update_one(
@@ -165,10 +198,28 @@ class JobService:
                     {'$set': update_data}
                 )
         
+        # Update search metadata
+        search_metadata_col = self.db.search_metadata
+        await search_metadata_col.update_one(
+            {"search_key": search_key},
+            {
+                "$set": {
+                    "last_offset": offset + len(all_jobs),
+                    "total_scraped": offset + len(all_jobs),
+                    "last_scrape_date": datetime.utcnow(),
+                    "platforms_used": platforms,
+                    "search_query": keywords,
+                    "search_location": location
+                }
+            },
+            upsert=True
+        )
+        
         print(f"\n{'='*60}")
         print(f"✅ Stored {new_jobs_count} new jobs in category: {search_category}")
         print(f"ℹ️  Skipped {skipped_no_description} jobs without descriptions")
         print(f"📊 Total jobs found: {len(all_jobs)}")
+        print(f"📍 Next scrape will start from job #{offset + len(all_jobs) + 1}")
         print(f"{'='*60}\n")
         return new_jobs_count
     
@@ -346,3 +397,167 @@ class JobService:
         """Cleanup scrapers"""
         if self.indeed_scraper:
             self.indeed_scraper.close()
+    
+    async def get_companies(self, search_role: str = None, date_filter: str = "all"):
+        """Get companies aggregated by job count"""
+        from datetime import datetime, timedelta
+        
+        # Build date filter
+        query = {'is_active': True, 'description': {'$exists': True, '$ne': '', '$ne': None}}
+        if date_filter == "today":
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            query['created_at'] = {'$gte': today_start}
+        elif date_filter == "yesterday":
+            yesterday_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            query['created_at'] = {'$gte': yesterday_start, '$lt': today_start}
+        elif date_filter == "week":
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            query['created_at'] = {'$gte': week_ago}
+        
+        # Add role filter if specified
+        if search_role:
+            query['$or'] = [
+                {'title': {'$regex': search_role, '$options': 'i'}},
+                {'search_category': {'$regex': search_role, '$options': 'i'}}
+            ]
+        
+        # Aggregate by company
+        pipeline = [
+            {'$match': query},
+            {
+                '$group': {
+                    '_id': '$company',
+                    'total_jobs': {'$sum': 1},
+                    'latest_date': {'$max': '$created_at'},
+                    'oldest_date': {'$min': '$created_at'},
+                    'job_titles': {'$addToSet': '$title'},
+                    'sources': {'$addToSet': '$source'},
+                    'locations': {'$addToSet': '$location'},
+                    'salaries': {'$push': '$salary'}
+                }
+            },
+            {'$sort': {'total_jobs': -1}},
+            {'$limit': 100}
+        ]
+        
+        companies = await self.collection.aggregate(pipeline).to_list(length=100)
+        
+        # Format results
+        formatted_companies = []
+        for company in companies:
+            formatted_companies.append({
+                'company_name': company['_id'],
+                'total_jobs': company['total_jobs'],
+                'latest_job_date': company['latest_date'].isoformat() if company.get('latest_date') else None,
+                'oldest_job_date': company['oldest_date'].isoformat() if company.get('oldest_date') else None,
+                'job_titles': company['job_titles'][:5],  # Limit to 5 titles
+                'sources': company['sources'],
+                'locations': company['locations'][:3]  # Limit to 3 locations
+            })
+        
+        return {
+            'companies': formatted_companies,
+            'total': len(formatted_companies)
+        }
+    
+    async def get_company_jobs(self, company_name: str):
+        """Get all jobs from a specific company"""
+        jobs = await self.collection.find({
+            'company': company_name,
+            'is_active': True,
+            'description': {'$exists': True, '$ne': '', '$ne': None}
+        }).sort('created_at', -1).to_list(length=100)
+        
+        # Convert dates to strings
+        for job in jobs:
+            job['_id'] = str(job['_id'])
+            if job.get('posted_date'):
+                job['posted_date'] = job['posted_date'].isoformat()
+            if job.get('last_verified'):
+                job['last_verified'] = job['last_verified'].isoformat()
+            if job.get('created_at'):
+                job['created_at'] = job['created_at'].isoformat()
+        
+        return {
+            'company_name': company_name,
+            'total_jobs': len(jobs),
+            'jobs': jobs
+        }
+    
+    async def filter_jobs(
+        self,
+        min_salary: int = None,
+        max_salary: int = None,
+        job_types: List[str] = None,
+        locations: List[str] = None,
+        sources: List[str] = None,
+        remote_only: bool = False,
+        date_filter: str = "all"
+    ):
+        """Filter jobs based on various criteria"""
+        from datetime import datetime, timedelta
+        
+        query = {
+            'is_active': True,
+            'description': {'$exists': True, '$ne': '', '$ne': None}
+        }
+        
+        # Date filter
+        if date_filter == "today":
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            query['created_at'] = {'$gte': today_start}
+        elif date_filter == "yesterday":
+            yesterday_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=1)
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            query['created_at'] = {'$gte': yesterday_start, '$lt': today_start}
+        elif date_filter == "week":
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            query['created_at'] = {'$gte': week_ago}
+        
+        # Location filter
+        if locations and len(locations) > 0:
+            query['location'] = {'$in': locations}
+        
+        if remote_only:
+            query['location'] = {'$regex': 'remote', '$options': 'i'}
+        
+        # Job type filter
+        if job_types and len(job_types) > 0:
+            query['job_type'] = {'$in': job_types}
+        
+        # Source filter
+        if sources and len(sources) > 0:
+            query['source'] = {'$in': sources}
+        
+        # Salary filter (requires parsing salary strings - simplified for now)
+        # This would need more sophisticated parsing in production
+        
+        jobs = await self.collection.find(query).sort('created_at', -1).to_list(length=1000)
+        
+        # Convert dates
+        for job in jobs:
+            job['_id'] = str(job['_id'])
+            if job.get('posted_date'):
+                job['posted_date'] = job['posted_date'].isoformat()
+            if job.get('last_verified'):
+                job['last_verified'] = job['last_verified'].isoformat()
+            if job.get('created_at'):
+                job['created_at'] = job['created_at'].isoformat()
+        
+        return {
+            'jobs': jobs,
+            'total': len(jobs)
+        }
+    
+    async def get_search_metadata(self, search_key: str):
+        """Get metadata for a search query"""
+        metadata_col = self.db.search_metadata
+        metadata = await metadata_col.find_one({'search_key': search_key})
+        
+        if metadata and metadata.get('_id'):
+            metadata['_id'] = str(metadata['_id'])
+        if metadata and metadata.get('last_scrape_date'):
+            metadata['last_scrape_date'] = metadata['last_scrape_date'].isoformat()
+        
+        return metadata
