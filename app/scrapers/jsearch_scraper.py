@@ -2,6 +2,7 @@ import requests
 import os
 from typing import List, Dict
 from datetime import datetime
+from app.config import settings
 
 class JSearchScraper:
     """JSearch API scraper for job listings from Indeed, LinkedIn, Glassdoor, etc."""
@@ -9,10 +10,13 @@ class JSearchScraper:
     BASE_URL = "https://jsearch.p.rapidapi.com/search"
     
     def __init__(self):
-        self.api_key = os.getenv('RAPIDAPI_KEY')
+        # Use settings from config which loads from .env
+        self.api_key = settings.rapidapi_key
         if not self.api_key:
-            print("⚠️ Warning: RAPIDAPI_KEY not found in environment variables")
-            print("   JSearch scraping will not work. Please add RAPIDAPI_KEY to .env or Railway")
+            print("⚠️ Warning: RAPIDAPI_KEY not found in .env file")
+            print("   JSearch scraping will not work. Please add RAPIDAPI_KEY to .env")
+        else:
+            print(f"🔑 JSearch API key loaded: {self.api_key[:10]}...")
         
         self.headers = {
             "X-RapidAPI-Key": self.api_key or "",
