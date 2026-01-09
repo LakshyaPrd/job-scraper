@@ -94,9 +94,29 @@ export default function Home() {
     }
   }, [API_URL, dateFilter]);
 
+  const fetchCompanies = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/companies?date_filter=${dateFilter}`);
+      if (!response.ok) throw new Error('Failed to fetch companies');
+      const data = await response.json();
+      setCompanies(data.companies || []);
+      setError('');
+    } catch (err) {
+      setError('Failed to load companies. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL, dateFilter]);
+
   useEffect(() => {
-    fetchAllJobs();
-  }, [fetchAllJobs]);
+    if (viewMode === 'companies') {
+      fetchCompanies();
+    } else {
+      fetchAllJobs();
+    }
+  }, [viewMode, fetchAllJobs, fetchCompanies]);
 
   const filterJobs = useCallback((query: string | null) => {
     setActiveFilter(query);
@@ -120,8 +140,15 @@ export default function Home() {
 
   const handleSearch = async (role: string, location: string) => {
     if (!role.trim()) return;
+    if (selectedPlatforms.length === 0) {
+      setError('Please select at least one platform to scrape');
+      return;
+    }
+    
     setSearching(true);
     setError('');
+    setCurrentSearchRole(role);
+    setCurrentSearchLocation(location);
     
     const initialJobCount = allJobs.length;
     
@@ -129,7 +156,13 @@ export default function Home() {
       const scrapeResponse = await fetch(`${API_URL}/api/scrape`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, location }),
+        body: JSON.stringify({ 
+          role, 
+          location,
+          platforms: selectedPlatforms,
+          max_jobs: maxJobs,
+          continue_from_last: continueFromLast
+        }),
       });
       if (!scrapeResponse.ok) throw new Error('Scraping failed');
       
@@ -204,6 +237,33 @@ export default function Home() {
         </div>
 
         <SearchBar onSearch={handleSearch} isSearching={searching} />
+
+        {/* Platform Selection */}
+        <PlatformSelector 
+          selectedPlatforms={selectedPlatforms}
+          onChange={setSelectedPlatforms}
+        />
+
+        {/* Job Count and Continue Option */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+          <div className="flex flex-wrap items-center gap-6">
+            <JobCountSelector maxJobs={maxJobs} onChange={setMaxJobs} />
+          </div>
+        </div>
+
+        {/* Continue from Last Scrape Option */}
+        {currentSearchRole && (
+          <ContinueOption
+            searchRole={currentSearchRole}
+            searchLocation={currentSearchLocation}
+            continueFromLast={continueFromLast}
+            onChange={setContinueFromLast}
+            apiUrl={API_URL}
+          />
+        )}
+
+        {/* View Toggle */}
+        <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
         {/* Date Filter Tabs */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
@@ -305,7 +365,12 @@ export default function Home() {
           </div>
         )}
 
-        <JobTable jobs={filteredJobs} loading={loading} />
+        {/* Conditional rendering based on view mode */}
+        {viewMode === 'companies' ? (
+          <CompanyList companies={companies} loading={loading} />
+        ) : (
+          <JobTable jobs={filteredJobs} loading={loading} />
+        )}
       </div>
       <footer className="text-center py-6 text-gray-500 text-sm">
         <p>Data from LinkedIn and Indeed • Full job descriptions included</p>
