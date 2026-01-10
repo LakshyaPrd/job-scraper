@@ -268,23 +268,6 @@ export default function CompanyPage() {
   );
 }
 
-
-interface Job {
-  _id: string;
-  job_id: string;
-  title: string;
-  company: string;
-  location: string;
-  url: string;
-  source: string;
-  posted_date?: string;
-  salary?: string;
-  job_type?: string;
-  description?: string;
-  created_at?: string;
-}
-
-export default function CompanyPage() {
   const params = useParams();
   const router = useRouter();
   const companyName = decodeURIComponent(params.company as string);
