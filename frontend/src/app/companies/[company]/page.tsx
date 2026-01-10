@@ -268,7 +268,6 @@ export default function CompanyPage() {
   );
 }
 
-  const params = useParams();
   const router = useRouter();
   const companyName = decodeURIComponent(params.company as string);
   
