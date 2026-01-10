@@ -8,6 +8,7 @@ import JobCountSelector from '@/components/JobCountSelector';
 import ContinueOption from '@/components/ContinueOption';
 import ViewToggle from '@/components/ViewToggle';
 import CompanyList from '@/components/CompanyList';
+import SearchBox from '@/components/SearchBox';
 
 interface Job {
   _id: string;
@@ -58,6 +59,7 @@ export default function Home() {
   const [continueFromLast, setContinueFromLast] = useState(false);
   const [currentSearchRole, setCurrentSearchRole] = useState('');
   const [currentSearchLocation, setCurrentSearchLocation] = useState('');
+  const [jobSearchQuery, setJobSearchQuery] = useState(''); // For SearchBox filtering
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -159,6 +161,28 @@ export default function Home() {
     });
     setFilteredJobs(filtered);
   }, [allJobs]);
+
+  const handleJobSearch = (query: string) => {
+    setJobSearchQuery(query);
+    if (!query.trim()) {
+      if (activeFilter) {
+        filterJobs(activeFilter);
+      } else {
+        setFilteredJobs(allJobs);
+      }
+      return;
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = allJobs.filter(job => 
+      job.title.toLowerCase().includes(lowerQuery) ||
+      job.company.toLowerCase().includes(lowerQuery) ||
+      job.location.toLowerCase().includes(lowerQuery) ||
+      (job.description || '').toLowerCase().includes(lowerQuery) ||
+      (job.salary || '').toLowerCase().includes(lowerQuery)
+    );
+    setFilteredJobs(filtered);
+  };
 
 
   const handleSearch = async (role: string, location: string) => {
@@ -400,6 +424,22 @@ export default function Home() {
 
           {/* RIGHT PANEL - Results */}
           <div className="lg:col-span-9">
+            {/* Search Box - Always Visible */}
+            <div className="mb-6">
+              <SearchBox 
+                onSearch={handleJobSearch}
+                placeholder={viewMode === 'companies' ? "Search companies..." : "Search jobs by title, company, location, or skills..."}
+                currentQuery={jobSearchQuery}
+              />
+            </div>
+
+            {/* Search Results Count */}
+            {jobSearchQuery && viewMode === 'jobs' && (
+              <div className="mb-4 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
+                Showing {filteredJobs.length} of {allJobs.length} jobs matching "{jobSearchQuery}"
+              </div>
+            )}
+
             {/* Stats Bar */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
               <div className="flex flex-wrap justify-between items-center gap-4">
