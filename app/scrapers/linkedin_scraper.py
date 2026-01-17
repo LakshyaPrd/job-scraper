@@ -33,8 +33,8 @@ class LinkedInScraper:
             all_jobs.extend(jobs)
             print(f"Page {page + 1}: Found {len(jobs)} jobs (Total: {len(all_jobs)})")
             
-            # Random delay between requests to avoid rate limiting
-            time.sleep(random.uniform(2, 4))
+            # Reduced delay from 2-4 seconds to 0.5-1 second for faster scraping
+            time.sleep(random.uniform(0.5, 1))
         
         return all_jobs
     

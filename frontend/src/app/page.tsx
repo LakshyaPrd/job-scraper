@@ -9,6 +9,7 @@ import ContinueOption from '@/components/ContinueOption';
 import ViewToggle from '@/components/ViewToggle';
 import CompanyList from '@/components/CompanyList';
 import SearchBox from '@/components/SearchBox';
+import ScrapeSessionList from '@/components/ScrapeSessionList';
 
 interface Job {
   _id: string;
@@ -55,11 +56,12 @@ export default function Home() {
   // New states for recruiter features
   const [viewMode, setViewMode] = useState<'jobs' | 'companies'>('jobs');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['linkedin', 'jsearch']);
-  const [maxJobs, setMaxJobs] = useState(100);
+  const [maxJobs, setMaxJobs] = useState(10); // Changed from 100 to 10
   const [continueFromLast, setContinueFromLast] = useState(false);
   const [currentSearchRole, setCurrentSearchRole] = useState('');
   const [currentSearchLocation, setCurrentSearchLocation] = useState('');
   const [jobSearchQuery, setJobSearchQuery] = useState(''); // For SearchBox filtering
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null); // For session filtering
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -174,6 +176,8 @@ export default function Home() {
     }
 
     const lowerQuery = query.toLowerCase();
+    
+    // Filter jobs
     const filtered = allJobs.filter(job => 
       job.title.toLowerCase().includes(lowerQuery) ||
       job.company.toLowerCase().includes(lowerQuery) ||
@@ -223,6 +227,7 @@ export default function Home() {
       } else {
         newHistory = [newItem, ...searchHistory].slice(0, 10);
       }
+      
       saveSearchHistory(newHistory);
       
       // Poll for new jobs instead of fixed wait
@@ -245,6 +250,9 @@ export default function Home() {
             setAllJobs(data.jobs || []);
             setFilteredJobs(data.jobs || []);
             filterJobs(role.trim());
+            
+            // Also fetch companies
+            await fetchCompanies();
             break;
           }
         }
@@ -255,6 +263,7 @@ export default function Home() {
       // Final fetch after timeout or success
       if (!hasNewJobs) {
         await fetchAllJobs();
+        await fetchCompanies();
         filterJobs(role.trim());
       }
       
@@ -262,6 +271,7 @@ export default function Home() {
       setError('Search failed. Please try again.');
       console.error(err);
     } finally {
+      // ALWAYS clear searching state
       setSearching(false);
     }
   };
@@ -315,10 +325,11 @@ export default function Home() {
               />
             )}
 
-            {/* View Toggle */}
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-
-            {/* Date Filter */}
+            {/* View Toggle - Always show but disabled during search */}
+            <ViewToggle 
+              viewMode={viewMode} 
+              onViewChange={setViewMode}
+            />  {/* Date Filter */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">📅 Filter by Date</h3>
               <div className="flex flex-col gap-2">
@@ -420,6 +431,66 @@ export default function Home() {
                 </div>
               </div>
             )}
+            
+            {/* Scrape Sessions List */}
+            <div className="mt-6">
+              <ScrapeSessionList 
+                onSessionClick={(sessionId) => {
+                  setSelectedSessionId(sessionId);
+                  // Fetch jobs for this session
+                  fetch(`${API_URL}/api/scrape-sessions/${sessionId}/jobs`)
+                    .then(res => res.json())
+                    .then(data => {
+                      const sessionJobs = data.jobs || [];
+                      setFilteredJobs(sessionJobs);
+                      setAllJobs(sessionJobs);
+                      setActiveFilter(null);
+                      setJobSearchQuery('');
+                      
+                      // Extract companies from these jobs for Company View
+                      const companyMap = new Map<string, any>();
+                      
+                      sessionJobs.forEach((job: any) => {
+                        const companyName = job.company || 'Unknown';
+                        if (companyMap.has(companyName)) {
+                          const existing = companyMap.get(companyName);
+                          existing.job_count++;
+                          existing.jobs.push(job);
+                        } else {
+                          companyMap.set(companyName, {
+                            company_name: companyName,
+                            job_count: 1,
+                            total_jobs: 1,
+                            jobs: [job],
+                            latest_job_date: job.created_at || new Date().toISOString(),
+                            job_titles: [job.title],
+                            locations: [job.location]
+                          });
+                        }
+                      });
+                      
+                      const sessionCompanies = Array.from(companyMap.values());
+                      setCompanies(sessionCompanies);
+                    });
+                }}
+              />
+            </div>
+
+            {/* Clear Session Filter */}
+            {selectedSessionId && (
+              <div className="mt-4">
+                <button
+                  onClick={() => {
+                    setSelectedSessionId(null);
+                    fetchAllJobs();
+                    fetchCompanies(); // Also refresh companies
+                  }}
+                  className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  ← Show All Jobs
+                </button>
+              </div>
+            )}
           </div>
 
           {/* RIGHT PANEL - Results */}
@@ -430,6 +501,7 @@ export default function Home() {
                 onSearch={handleJobSearch}
                 placeholder={viewMode === 'companies' ? "Search companies..." : "Search jobs by title, company, location, or skills..."}
                 currentQuery={jobSearchQuery}
+                suggestions={viewMode === 'companies' ? companies.map(c => c.company_name) : []}
               />
             </div>
 
@@ -437,6 +509,13 @@ export default function Home() {
             {jobSearchQuery && viewMode === 'jobs' && (
               <div className="mb-4 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
                 Showing {filteredJobs.length} of {allJobs.length} jobs matching "{jobSearchQuery}"
+              </div>
+            )}
+
+            {/* Company Search Results Count */}
+            {jobSearchQuery && viewMode === 'companies' && (
+              <div className="mb-4 text-sm text-gray-600 bg-blue-50 px-4 py-2 rounded-lg">
+                Showing {companies.filter(c => c.company_name?.toLowerCase().includes(jobSearchQuery.toLowerCase())).length} of {companies.length} companies matching "{jobSearchQuery}"
               </div>
             )}
 
@@ -484,7 +563,7 @@ export default function Home() {
 
             {/* Results - Conditional rendering based on view mode */}
             {viewMode === 'companies' ? (
-              <CompanyList companies={companies} loading={loading} />
+              <CompanyList companies={companies} loading={loading} searchQuery={jobSearchQuery} />
             ) : (
               <JobTable jobs={filteredJobs} loading={loading} />
             )}

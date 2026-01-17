@@ -12,8 +12,7 @@ export default function PlatformSelector({ selectedPlatforms, onChange }: Platfo
   
   const platforms = [
     { id: 'linkedin', name: 'LinkedIn', color: 'bg-blue-100 text-blue-800' },
-    { id: 'jsearch', name: 'Indeed + Glassdoor', color: 'bg-purple-100 text-purple-800' },
-    { id: 'indeed', name: 'Indeed (Selenium)', color: 'bg-green-100 text-green-800' }
+    { id: 'jsearch', name: 'Indeed + Glassdoor', color: 'bg-purple-100 text-purple-800' }
   ];
 
   const togglePlatform = (platformId: string) => {

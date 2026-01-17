@@ -6,7 +6,7 @@ interface JobCountSelectorProps {
 }
 
 export default function JobCountSelector({ maxJobs, onChange }: JobCountSelectorProps) {
-  const options = [50, 100, 200, 500, 1000];
+  const options = [10, 20, 30, 40, 50]; // Reduced from [50, 100, 200, 500, 1000]
 
   return (
     <div className="flex items-center gap-3">

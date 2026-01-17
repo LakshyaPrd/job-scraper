@@ -34,6 +34,31 @@ class FilterRequest(BaseModel):
     locations: Optional[List[str]] = None
     sources: Optional[List[str]] = None
     remote_only: bool = False
+
+class ScrapeSession(BaseModel):
+    """Model for tracking scrape sessions"""
+    session_id: str
+    search_query: str
+    search_location: str = ""
+    platforms: List[str] = []
+    total_jobs: int = 0
+    new_jobs: int = 0
+    duplicate_jobs: int = 0
+    scraped_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = "in_progress"  # in_progress, completed, failed
+    error_message: Optional[str] = None
+
+class ScrapeSessionResponse(BaseModel):
+    """Response model for scrape session"""
+    session_id: str
+    search_query: str
+    search_location: str
+    platforms: List[str]
+    total_jobs: int
+    new_jobs: int
+    duplicate_jobs: int
+    scraped_at: str
+    status: str
     date_filter: str = "all"
     
 class JobResponse(BaseModel):

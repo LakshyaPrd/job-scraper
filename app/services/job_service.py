@@ -1,6 +1,7 @@
 from typing import List, Dict
 from datetime import datetime
 import time
+import uuid  # For generating session IDs
 
 # Make scrapers optional - they won't work in Railway without Chrome/display
 try:
@@ -10,14 +11,6 @@ except ImportError as e:
     print(f"⚠️ Warning: LinkedIn scraper not available - {e}")
     LinkedInScraper = None
     LINKEDIN_AVAILABLE = False
-
-try:
-    from app.scrapers.indeed_scraper import IndeedScraper
-    INDEED_SELENIUM_AVAILABLE = True
-except ImportError as e:
-    print(f"ℹ️ Info: Selenium Indeed scraper not available (expected in production) - {e}")
-    IndeedScraper = None
-    INDEED_SELENIUM_AVAILABLE = False
 
 # JSearch API scraper - works everywhere (no Selenium needed)
 try:
@@ -50,19 +43,9 @@ class JobService:
         else:
             self.linkedin_scraper = None
             print("ℹ️ LinkedIn scraper not available")
-            
-        # Initialize Selenium Indeed scraper LAST (only as fallback if no API key)
-        # Since user has RAPIDAPI_KEY, this won't be needed
-        if INDEED_SELENIUM_AVAILABLE and IndeedScraper and not self.jsearch_scraper:
-            self.indeed_scraper = IndeedScraper(use_brave=use_brave)
-            print("✅ Indeed Selenium scraper initialized (fallback only)")
-        else:
-            self.indeed_scraper = None
-            if self.jsearch_scraper:
-                print("ℹ️ Selenium scraper skipped - JSearch API available")
         
         # Check if we have at least one scraper
-        if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
+        if not self.linkedin_scraper and not self.jsearch_scraper:
             print("⚠️ Running in API-only mode (no scrapers available)")
     
     async def scrape_and_store_jobs(
@@ -74,7 +57,7 @@ class JobService:
         continue_from_last: bool = False
     ):
         """Scrape jobs from selected platforms with job limit and pagination support"""
-        if not self.linkedin_scraper and not self.jsearch_scraper and not self.indeed_scraper:
+        if not self.linkedin_scraper and not self.jsearch_scraper:
             print("⚠️ Scraping not available in this environment (no scrapers configured)")
             return 0
         
@@ -86,10 +69,31 @@ class JobService:
             if self.jsearch_scraper:
                 platforms.append("jsearch")
             
+        # Generate unique session ID
+        session_id = str(uuid.uuid4())
+        
+        # Create scrape session record
+        sessions_collection = self.db.scrape_sessions
+        session_data = {
+            "session_id": session_id,
+            "search_query": keywords,
+            "search_location": location,
+            "platforms": platforms,
+            "total_jobs": 0,
+            "new_jobs": 0,
+            "duplicate_jobs": 0,
+            "scraped_at": datetime.utcnow(),
+            "status": "in_progress"
+        }
+        await sessions_collection.insert_one(session_data)
+        
         print(f"\n{'='*60}")
-        print(f"🔍 Starting scrape for: {keywords} in {location or 'Remote'}")
-        print(f"📊 Platforms: {', '.join(platforms)}")
-        print(f"🎯 Max jobs: {max_jobs}")
+        print(f"🔍 Starting Scrape Session: {session_id[:8]}...")
+        print(f"📝 Query: {keywords}")
+        if location:
+            print(f"📍 Location: {location}")
+        print(f"🔘 Platforms: {', '.join(platforms)}")
+        print(f"🎯 Max Jobs: {max_jobs}")
         print(f"{'='*60}\n")
         
         # Normalize the search category
@@ -138,7 +142,7 @@ class JobService:
                         details = self.linkedin_scraper.get_job_details(job['url'])
                         if details.get('description'):
                             job['description'] = details['description']
-                        time.sleep(1)
+                        time.sleep(0.2)  # Reduced from 1 to 0.2 seconds
                     except Exception as e:
                         print(f"  ⚠️ Error: {e}")
                 print(f"✅ LinkedIn descriptions fetched\n")
@@ -146,30 +150,6 @@ class JobService:
             all_jobs.extend(linkedin_jobs)
             jobs_needed -= len(linkedin_jobs)
             print(f"✅ Found {len(linkedin_jobs)} LinkedIn jobs\n")
-        
-        # 3. Scrape with Selenium Indeed if selected (local only)
-        if "indeed" in platforms and self.indeed_scraper and jobs_needed > 0:
-            print("🔵 Scraping Indeed with Selenium (local only)...")
-            pages_needed = min((jobs_per_platform // 15) + 1, 5)
-            indeed_jobs = self.indeed_scraper.search_jobs(keywords, location, max_pages=pages_needed)
-            indeed_jobs = indeed_jobs[:min(len(indeed_jobs), jobs_per_platform)]
-            
-            if indeed_jobs:
-                print(f"📄 Fetching descriptions for Indeed jobs (max {min(len(indeed_jobs), 10)})...")
-                for idx, job in enumerate(indeed_jobs[:10], 1):
-                    try:
-                        print(f"  [{idx}/{min(len(indeed_jobs), 10)}] {job['title'][:40]}...")
-                        details = self.indeed_scraper.get_job_details(job['url'])
-                        if details.get('description'):
-                            job['description'] = details['description']
-                        time.sleep(2)
-                    except Exception as e:
-                        print(f"  ⚠️ Error: {e}")
-                print(f"✅ Indeed descriptions fetched\n")
-            
-            all_jobs.extend(indeed_jobs)
-            jobs_needed -= len(indeed_jobs)
-            print(f"✅ Found {len(indeed_jobs)} Indeed jobs\n")
         
         # Limit to max_jobs
         all_jobs = all_jobs[:max_jobs]
@@ -188,6 +168,7 @@ class JobService:
             
             if not existing:
                 job['search_category'] = search_category
+                job['scrape_session_id'] = session_id  # Link to session
                 await self.collection.insert_one(job)
                 new_jobs_count += 1
             else:
@@ -196,6 +177,8 @@ class JobService:
                     update_data['search_category'] = search_category
                 if job.get('description') and not existing.get('description'):
                     update_data['description'] = job['description']
+                if not existing.get('scrape_session_id'):
+                    update_data['scrape_session_id'] = session_id
                 await self.collection.update_one(
                     {'job_id': job['job_id']},
                     {'$set': update_data}
@@ -218,13 +201,37 @@ class JobService:
             upsert=True
         )
         
+        # Update scrape session with final counts
+        duplicate_count = len(all_jobs) - new_jobs_count - skipped_no_description
+        await sessions_collection.update_one(
+            {"session_id": session_id},
+            {
+                "$set": {
+                    "total_jobs": len(all_jobs),
+                    "new_jobs": new_jobs_count,
+                    "duplicate_jobs": duplicate_count,
+                    "status": "completed"
+                }
+            }
+        )
+        
         print(f"\n{'='*60}")
         print(f"✅ Stored {new_jobs_count} new jobs in category: {search_category}")
-        print(f"ℹ️  Skipped {skipped_no_description} jobs without descriptions")
+        if skipped_no_description > 0:
+            print(f"ℹ️  Skipped {skipped_no_description} jobs without descriptions")
+        if duplicate_count > 0:
+            print(f"ℹ️  Skipped {duplicate_count} duplicate jobs")
         print(f"📊 Total jobs found: {len(all_jobs)}")
         print(f"📍 Next scrape will start from job #{offset + len(all_jobs) + 1}")
+        print(f"🆔 Session ID: {session_id[:8]}...")
         print(f"{'='*60}\n")
-        return new_jobs_count
+        
+        return {
+            "session_id": session_id,
+            "new_jobs": new_jobs_count,
+            "total_jobs": len(all_jobs),
+            "duplicate_jobs": duplicate_count
+        }
     
     async def get_active_jobs(self, skip: int = 0, limit: int = 100, date_filter: str = "all"):
         """

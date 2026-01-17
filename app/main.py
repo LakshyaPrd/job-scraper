@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from app.database import connect_to_mongo, close_mongo_connection, get_database
 from app.config import settings
 from app.models import SearchRequest, JobResponse, CategoriesResponse, FilterRequest
-from app.routers import companies
+from app.routers import companies, sessions  # Import sessions router
 from app.services.job_service import JobService
 from app.scheduler import scheduler
 
@@ -25,7 +25,6 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     scheduler.shutdown()
-    job_service.cleanup()  # Close Selenium driver
     await close_mongo_connection()
 
 app = FastAPI(
@@ -36,6 +35,7 @@ app = FastAPI(
 
 # Register routers
 app.include_router(companies.router)
+app.include_router(sessions.router)  # Add sessions router
 
 # CORS
 app.add_middleware(

@@ -42,3 +42,28 @@ async def get_company_jobs(
         raise HTTPException(status_code=404, detail=f"No jobs found for company: {company_name}")
     
     return result
+
+@router.get("/api/companies/{company_name}/info")
+async def get_company_info(company_name: str):
+    """
+    Get company information (website and description) using Google Custom Search API
+    
+    Returns:
+        {
+            "website": "https://www.company.com",
+            "description": "Actual company description from Google"
+        }
+    """
+    from app.services.company_info_service import CompanyInfoService
+    
+    company_info_service = CompanyInfoService()
+    info = await company_info_service.get_company_info(company_name)
+    
+    # If we got a website, try to fetch a better About description
+    if info['website'] and not info['description']:
+        about = await company_info_service.get_company_about(company_name, info['website'])
+        if about:
+            info['description'] = about
+    
+    return info
+
