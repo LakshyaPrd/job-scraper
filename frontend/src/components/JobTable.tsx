@@ -77,48 +77,52 @@ export default function JobTable({ jobs, loading }: JobTableProps) {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
+      <div className="flex flex-col justify-center items-center h-64 glass rounded-2xl">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-20 w-20 border-4 border-gray-200"></div>
+          <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-blue-600 absolute top-0"></div>
+        </div>
+        <p className="mt-4 text-gray-600 font-medium">Loading jobs...</p>
       </div>
     );
   }
 
   if (jobs.length === 0) {
     return (
-      <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-        <div className="text-gray-400 text-6xl mb-4">📭</div>
-        <h3 className="text-xl font-semibold text-gray-700 mb-2">No jobs found</h3>
-        <p className="text-gray-500">Search for a role to find job postings</p>
+      <div className="text-center py-20 glass rounded-2xl shadow-xl">
+        <div className="text-gray-300 text-7xl mb-6">📭</div>
+        <h3 className="text-2xl font-bold text-gray-800 mb-3">No jobs found</h3>
+        <p className="text-gray-600 text-lg">Try searching for a different role or adjust your filters</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="glass rounded-2xl shadow-xl overflow-hidden border border-white/20 animate-fade-in">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Job Title
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Company
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Location
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Source
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Added
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Salary
                 </th>
-                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Action
                 </th>
               </tr>
@@ -127,52 +131,56 @@ export default function JobTable({ jobs, loading }: JobTableProps) {
               {jobs.map((job, index) => (
                 <tr 
                   key={job._id} 
-                  className={`hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                  className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}
                 >
                   <td className="px-6 py-4">
                     <div className="max-w-xs">
-                      <button
-                        onClick={() => handleJobClick(job.job_id)}
-                        className="text-sm font-medium text-gray-900 hover:text-blue-600 line-clamp-2 text-left underline decoration-transparent hover:decoration-blue-600 transition-all"
+                      <a
+                        href={`/jobs/${job.job_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-semibold text-gray-900 hover:text-blue-600 line-clamp-2 text-left underline decoration-transparent hover:decoration-blue-600 transition-all cursor-pointer"
                       >
                         {job.title}
-                      </button>
+                      </a>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-700 font-medium">{job.company}</span>
+                    <span className="text-sm text-gray-800 font-medium">{job.company}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600 flex items-center gap-1">
+                    <span className="text-sm text-gray-600 flex items-center gap-1.5">
                       <span className="text-gray-400">📍</span>
                       <span className="line-clamp-1">{job.location || 'Remote'}</span>
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full border ${getSourceBadge(job.source)}`}>
+                    <span className={`inline-flex px-3 py-1.5 text-xs font-bold rounded-full border-2 ${getSourceBadge(job.source)}`}>
                       {job.source}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-500" title={job.posted_date ? 'Posted date' : 'Added to system'}>
+                    <span className="text-sm text-gray-500 font-medium" title={job.posted_date ? 'Posted date' : 'Added to system'}>
                       {formatDate(job.posted_date, job.created_at)}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 font-medium">
                       {job.salary || '-'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => handleJobClick(job.job_id)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    <a
+                      href={`/jobs/${job.job_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm hover:shadow-md transform hover:scale-105"
                     >
                       View Details
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                    </button>
+                    </a>
                   </td>
                 </tr>
               ))}
@@ -181,9 +189,9 @@ export default function JobTable({ jobs, loading }: JobTableProps) {
         </div>
         
         {/* Footer with count */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-          <p className="text-sm text-gray-600">
-            Showing <span className="font-semibold">{jobs.length}</span> job{jobs.length !== 1 ? 's' : ''}
+        <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-t-2 border-gray-200">
+          <p className="text-sm text-gray-700 font-medium">
+            Showing <span className="font-bold text-blue-600">{jobs.length}</span> job{jobs.length !== 1 ? 's' : ''}
           </p>
         </div>
       </div>

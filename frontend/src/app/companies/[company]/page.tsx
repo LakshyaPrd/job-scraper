@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import JobTable from '@/components/JobTable';
+import JobList from '@/components/JobList';
 import SearchBox from '@/components/SearchBox';
 
 interface Job {
@@ -164,112 +164,160 @@ export default function CompanyPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-8 animate-fade-in">
           <button
             onClick={() => router.back()}
-            className="text-blue-600 hover:text-blue-800 flex items-center gap-2 mb-4 font-medium transition-colors"
+            className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-white rounded-lg shadow-sm hover:shadow-md text-gray-700 hover:text-blue-600 font-bold transition-all"
           >
-            ← Back to Companies
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Companies
           </button>
           
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-start justify-between flex-wrap gap-4">
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">{companyName}</h1>
-                <p className="text-gray-600 text-lg mb-1">
-                  {allJobs.length} job {allJobs.length === 1 ? 'opening' : 'openings'}
-                </p>
-                {companyInfo.industry && (
-                  <p className="text-sm text-gray-500">
-                    🏢 {companyInfo.industry} Industry
-                  </p>
-                )}
-              </div>
+          {/* Company Hero Card */}
+          <div className="glass rounded-3xl shadow-2xl overflow-hidden border-2 border-white/30">
+            {/* Gradient Header */}
+            <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
               
-              <div className="flex gap-3">
-                {companyWebsite && (
-                  <a
-                    href={companyWebsite}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
-                  >
-                    🌐 Visit Website
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                )}
-                <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(companyName + ' company')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center gap-2"
-                >
-                  🔍 Search about company on Google
-                </a>
+              <div className="relative">
+                <div className="flex items-start justify-between flex-wrap gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-4xl">
+                        🏢
+                      </div>
+                      <div>
+                        <h1 className="text-4xl md:text-5xl font-bold leading-tight">{companyName}</h1>
+                        {companyInfo.industry && (
+                          <p className="text-white/90 text-lg font-medium mt-1">
+                            {companyInfo.industry} Industry
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-white/90">
+                      <div className="flex items-center gap-2 bg-white/20 backdrop-blur px-4 py-2 rounded-xl">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span className="font-bold text-xl">{allJobs.length}</span>
+                        <span className="font-medium">Open Positions</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-3">
+                    {companyWebsite && (
+                      <a
+                        href={companyWebsite}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 bg-white/20 backdrop-blur-sm border border-white/30 text-white rounded-xl hover:bg-white/30 transition-all font-bold flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        Visit Website
+                      </a>
+                    )}
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(companyName + ' company')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3 bg-white text-gray-800 rounded-xl hover:bg-gray-100 transition-all font-bold flex items-center gap-2 shadow-lg hover:shadow-xl"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      Google Search
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Company Description */}
-            {companyInfo.description && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">About {companyName}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{companyInfo.description}</p>
-              </div>
-            )}
+            {/* Content Section */}
+            <div className="p-8 bg-white/50 backdrop-blur-sm">
+              {/* Company Description */}
+              {companyInfo.description && (
+                <div className="mb-6 p-6 glass rounded-2xl border border-white/20">
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                    <span className="text-2xl">📖</span>
+                    About {companyName}
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">{companyInfo.description}</p>
+                </div>
+              )}
 
-            {/* Company Info Stats */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-sm text-blue-600 font-medium">Total Openings</div>
-                <div className="text-2xl font-bold text-blue-900">{allJobs.length}</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="text-sm text-green-600 font-medium">Locations</div>
-                <div className="text-2xl font-bold text-green-900">
-                  {companyInfo.locations.length}
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="glass rounded-2xl p-6 border border-blue-200 relative overflow-hidden group hover:scale-105 transition-transform">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200 rounded-full blur-2xl opacity-50 group-hover:opacity-70 transition"></div>
+                  <div className="relative">
+                    <div className="text-3xl mb-2">💼</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">{allJobs.length}</div>
+                    <div className="text-sm text-gray-600 font-semibold">Total Openings</div>
+                  </div>
+                </div>
+                <div className="glass rounded-2xl p-6 border border-green-200 relative overflow-hidden group hover:scale-105 transition-transform">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-green-200 rounded-full blur-2xl opacity-50 group-hover:opacity-70 transition"></div>
+                  <div className="relative">
+                    <div className="text-3xl mb-2">📍</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-800 bg-clip-text text-transparent">{companyInfo.locations.length}</div>
+                    <div className="text-sm text-gray-600 font-semibold">Locations</div>
+                  </div>
+                </div>
+                <div className="glass rounded-2xl p-6 border border-purple-200 relative overflow-hidden group hover:scale-105 transition-transform">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200 rounded-full blur-2xl opacity-50 group-hover:opacity-70 transition"></div>
+                  <div className="relative">
+                    <div className="text-3xl mb-2">🔗</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent">{new Set(allJobs.map(j => j.source)).size}</div>
+                    <div className="text-sm text-gray-600 font-semibold">Sources</div>
+                  </div>
+                </div>
+                <div className="glass rounded-2xl p-6 border border-orange-200 relative overflow-hidden group hover:scale-105 transition-transform">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-orange-200 rounded-full blur-2xl opacity-50 group-hover:opacity-70 transition"></div>
+                  <div className="relative">
+                    <div className="text-3xl mb-2">⏰</div>
+                    <div className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent">{companyInfo.jobTypes.length || 'Various'}</div>
+                    <div className="text-sm text-gray-600 font-semibold">Job Types</div>
+                  </div>
                 </div>
               </div>
-              <div className="bg-purple-50 rounded-lg p-4">
-                <div className="text-sm text-purple-600 font-medium">Sources</div>
-                <div className="text-2xl font-bold text-purple-900">
-                  {new Set(allJobs.map(j => j.source)).size}
+
+              {/* Key Locations */}
+              {companyInfo.locations.length > 0 && (
+                <div className="glass rounded-2xl p-6 border border-white/20">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span className="text-2xl">🌍</span>
+                    Office Locations
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {companyInfo.locations.slice(0, 8).map((loc, idx) => (
+                      <span key={idx} className="px-4 py-2 bg-gradient-to-r from-green-100 to-teal-100 text-green-800 rounded-xl text-sm font-bold border border-green-200 flex items-center gap-2">
+                        <span>📍</span>
+                        {loc}
+                      </span>
+                    ))}
+                    {companyInfo.locations.length > 8 && (
+                      <span className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold border border-gray-200">
+                        +{companyInfo.locations.length - 8} more
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-4">
-                <div className="text-sm text-orange-600 font-medium">Job Types</div>
-                <div className="text-2xl font-bold text-orange-900">
-                  {companyInfo.jobTypes.length || 'Various'}
-                </div>
-              </div>
+              )}
             </div>
-
-            {/* Key Locations */}
-            {companyInfo.locations.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Office Locations</h3>
-                <div className="flex flex-wrap gap-2">
-                  {companyInfo.locations.slice(0, 5).map((loc, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                      📍 {loc}
-                    </span>
-                  ))}
-                  {companyInfo.locations.length > 5 && (
-                    <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                      +{companyInfo.locations.length - 5} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Search Box */}
+       {/* Search Box */}
         <div className="mb-6">
           <SearchBox 
             onSearch={handleSearch}
@@ -291,8 +339,8 @@ export default function CompanyPage() {
           </div>
         )}
 
-        {/* Jobs Table */}
-        <JobTable jobs={filteredJobs} loading={loading} />
+        {/* Jobs Grid */}
+        <JobList jobs={filteredJobs} loading={loading} />
       </div>
     </main>
   );

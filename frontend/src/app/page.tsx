@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import JobTable from '@/components/JobTable';
+import JobList from '@/components/JobList';
 import SearchBar from '@/components/SearchBar';
 import PlatformSelector from '@/components/PlatformSelector';
 import JobCountSelector from '@/components/JobCountSelector';
@@ -286,12 +286,19 @@ export default function Home() {
   const indeedCount = filteredJobs.filter(j => j.source === 'indeed').length;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-6 max-w-[1800px]">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Job Scraper for Recruiters</h1>
-          <p className="text-gray-600">Platform selection • Smart pagination • Company insights</p>
+    <main className="min-h-screen">
+      <div className="container mx-auto px-4 py-8 max-w-[1800px]">
+        {/* Modern Header with Gradient */}
+        <div className="text-center mb-10 animate-fade-in">
+          <div className="inline-block mb-4">
+            <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-3">
+              Job Scraper Pro
+            </h1>
+            <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-full"></div>
+          </div>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Professional job scraping tool for recruiters. Search across multiple platforms with smart filtering and company insights.
+          </p>
         </div>
 
         {/* Search Bar at Top */}
@@ -565,7 +572,7 @@ export default function Home() {
             {viewMode === 'companies' ? (
               <CompanyList companies={companies} loading={loading} searchQuery={jobSearchQuery} />
             ) : (
-              <JobTable jobs={filteredJobs} loading={loading} />
+              <JobList jobs={filteredJobs} loading={loading} />
             )}
           </div>
         </div>
