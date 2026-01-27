@@ -156,3 +156,37 @@ button:focus, input:focus, select:focus, textarea:focus {
   ring-color: #3B82F6;
   ring-opacity: 0.5;
 }
+/* Light theme with orange contrast */
+input, select {
+  border-radius: 8px;
+  border: 1px solid #ececec;
+  padding: 10px;
+  background: #f7f8fa;
+}
+
+/* Button Styles */
+button, a {
+  border-radius: 8px;
+}
+.btn-primary {
+  background: linear-gradient(90deg, #FF8800 0%, #FF6600 100%);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(255,136,0,0.08);
+}
+.btn-primary:hover {
+  background: linear-gradient(90deg, #FF6600 0%, #FF8800 100%);
+}
+.btn-secondary {
+  background: #fff;
+  color: #FF8800;
+  border: 1px solid #FF8800;
+  font-weight: 600;
+  border-radius: 8px;
+}
+.btn-secondary:hover {
+  background: #FF8800;
+  color: #fff;
+}

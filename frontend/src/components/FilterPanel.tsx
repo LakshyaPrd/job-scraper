@@ -59,7 +59,7 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+    <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border-2 border-orange-100">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between w-full text-left"
@@ -72,7 +72,7 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
         <div className="mt-4 space-y-4">
           {/* Salary Range */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">💰 Salary Range</label>
+            <label className="text-sm font-medium text-orange-700 mb-2 block">💰 Salary Range</label>
             <div className="flex gap-4">
               <div className="flex-1">
                 <input
@@ -80,7 +80,7 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
                   placeholder="Min ($)"
                   value={minSalary || ''}
                   onChange={(e) => setMinSalary(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
               <div className="flex-1">
@@ -89,7 +89,7 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
                   placeholder="Max ($)"
                   value={maxSalary || ''}
                   onChange={(e) => setMaxSalary(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -97,15 +97,15 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
 
           {/* Job Types */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">💼 Job Type</label>
+            <label className="text-sm font-medium text-orange-700 mb-2 block">💼 Job Type</label>
             <div className="flex flex-wrap gap-2">
               {jobTypes.map(type => (
                 <label
                   key={type}
                   className={`px-3 py-1 rounded-full text-sm cursor-pointer transition-all ${
                     selectedJobTypes.includes(type)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-orange-100'
                   }`}
                 >
                   <input
@@ -122,15 +122,15 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
 
           {/* Sources */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">📍 Source</label>
+            <label className="text-sm font-medium text-orange-700 mb-2 block">📍 Source</label>
             <div className="flex flex-wrap gap-2">
               {sources.map(source => (
                 <label
                   key={source}
                   className={`px-3 py-1 rounded-full text-sm capitalize cursor-pointer transition-all ${
                     selectedSources.includes(source)
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-orange-400 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-orange-100'
                   }`}
                 >
                   <input
@@ -154,7 +154,7 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
                 onChange={(e) => setRemoteOnly(e.target.checked)}
                 className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
               />
-              <span className="text-sm font-medium text-gray-700">🏠 Remote jobs only</span>
+              <span className="text-sm font-medium text-orange-700">🏠 Remote jobs only</span>
             </label>
           </div>
 
@@ -162,13 +162,13 @@ export default function FilterPanel({ onApplyFilters }: FilterPanelProps) {
           <div className="flex gap-3 pt-4 border-t">
             <button
               onClick={handleApply}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg font-medium hover:from-orange-700 hover:to-orange-800 transition-colors"
             >
               Apply Filters
             </button>
             <button
               onClick={handleClear}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg font-medium hover:bg-orange-200 transition-colors"
             >
               Clear
             </button>

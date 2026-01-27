@@ -16,7 +16,7 @@ interface TabsProps {
 export default function Tabs({ tabs, activeTab, onTabChange, onDeleteTab }: TabsProps) {
   return (
     <div className="mb-6">
-      <div className="border-b border-gray-200">
+      <div className="border-b border-orange-200">
         <nav className="flex flex-wrap gap-1 -mb-px" aria-label="Tabs">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -27,8 +27,8 @@ export default function Tabs({ tabs, activeTab, onTabChange, onDeleteTab }: Tabs
                   className={`
                     inline-flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all
                     ${isActive 
-                      ? 'border-blue-500 text-blue-600 bg-blue-50/50' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-orange-500 text-orange-600 bg-orange-50/50' 
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-orange-300'
                     }
                   `}
                 >
@@ -37,7 +37,7 @@ export default function Tabs({ tabs, activeTab, onTabChange, onDeleteTab }: Tabs
                     <span className={`
                       px-2 py-0.5 text-xs font-semibold rounded-full
                       ${isActive 
-                        ? 'bg-blue-100 text-blue-700' 
+                        ? 'bg-orange-100 text-orange-700' 
                         : 'bg-gray-100 text-gray-600'
                       }
                     `}>
@@ -51,7 +51,7 @@ export default function Tabs({ tabs, activeTab, onTabChange, onDeleteTab }: Tabs
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete all jobs in "${tab.label}"?`)) {
+                      if (confirm(`Delete all jobs in \"${tab.label}\"?`)) {
                         onDeleteTab(tab.id);
                       }
                     }}
