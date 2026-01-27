@@ -340,6 +340,7 @@ export default function Home() {
             <ViewToggle 
               viewMode={viewMode} 
               onViewChange={setViewMode}
+            />
               {/* Date Filter */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">📅 Filter by Date</h3>
