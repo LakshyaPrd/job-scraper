@@ -2,10 +2,10 @@
 
 interface JobCountSelectorProps {
   maxJobs: number;
-  onMaxJobsChange: (count: number) => void;
+  onChange: (count: number) => void;
 }
 
-export default function JobCountSelector({ maxJobs, onMaxJobsChange }: JobCountSelectorProps) {
+export default function JobCountSelector({ maxJobs, onChange }: JobCountSelectorProps) {
   const options = [10, 20, 30, 40, 50];
 
   return (
@@ -17,7 +17,7 @@ export default function JobCountSelector({ maxJobs, onMaxJobsChange }: JobCountS
         <select
           id="maxJobs"
           value={maxJobs}
-          onChange={(e) => onMaxJobsChange(Number(e.target.value))}
+          onChange={(e) => onChange(Number(e.target.value))}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-900 font-medium cursor-pointer appearance-none pr-10"
         >
           {options.map(count => (

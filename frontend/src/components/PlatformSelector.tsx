@@ -2,10 +2,10 @@
 
 interface PlatformSelectorProps {
   selectedPlatforms: string[];
-  onPlatformsChange: (platforms: string[]) => void;
+  onChange: (platforms: string[]) => void;
 }
 
-export default function PlatformSelector({ selectedPlatforms, onPlatformsChange }: PlatformSelectorProps) {
+export default function PlatformSelector({ selectedPlatforms, onChange }: PlatformSelectorProps) {
   const platforms = [
     { id: 'linkedin', name: 'LinkedIn', icon: '💼' },
     { id: 'jsearch', name: 'Indeed/Glassdoor', icon: '🔍' },
@@ -13,9 +13,9 @@ export default function PlatformSelector({ selectedPlatforms, onPlatformsChange 
 
   const togglePlatform = (platformId: string) => {
     if (selectedPlatforms.includes(platformId)) {
-      onPlatformsChange(selectedPlatforms.filter(p => p !== platformId));
+      onChange(selectedPlatforms.filter(p => p !== platformId));
     } else {
-      onPlatformsChange([...selectedPlatforms, platformId]);
+      onChange([...selectedPlatforms, platformId]);
     }
   };
 
