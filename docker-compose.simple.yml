@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Python Backend
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: job-scraper-backend
+    ports:
+      - "8001:8000"  # Using 8001 to avoid conflict with CRM on 8000
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - DATABASE_NAME=job_scraper
+      - CORS_ORIGINS=*
+      # Add your API keys here
+      # - RAPIDAPI_KEY=your_key
+    depends_on:
+      - mongo
+    restart: always
+    networks:
+      - app-network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: job-scraper-frontend
+    ports:
+      - "3001:3000"  # Using 3001 to avoid conflict with CRM on 3000
+    environment:
+      - NEXT_PUBLIC_API_URL=http://76.13.17.251:8001
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - app-network
+
+  # MongoDB Database
+  mongo:
+    image: mongo:7.0
+    container_name: job-scraper-mongo
+    ports:
+      - "27018:27017"  # Using 27018 to avoid any conflicts
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
