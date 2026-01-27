@@ -230,48 +230,50 @@ export default function Home() {
       
       saveSearchHistory(newHistory);
       
-      // Poll for new jobs instead of fixed wait
-      let attempts = 0;
-      const maxAttempts = 30; // 30 attempts * 3 seconds = 90 seconds max
-      let hasNewJobs = false;
+      // Wait for scraping to complete (give it some time)
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       
-      while (attempts < maxAttempts && !hasNewJobs) {
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds between checks
+      // Poll for new jobs
+      let attempts = 0;
+      const maxAttempts = 20; // 20 attempts * 3 seconds = 60 seconds max
+      
+      const pollInterval = setInterval(async () => {
+        attempts++;
         
-        // Fetch jobs to check if new ones arrived
-        const response = await fetch(`${API_URL}/api/jobs?limit=1000&date_filter=${dateFilter}`);
-        if (response.ok) {
-          const data = await response.json();
-          const currentJobCount = data.jobs?.length || 0;
-          
-          // Check if we got new jobs
-          if (currentJobCount > initialJobCount) {
-            hasNewJobs = true;
-            setAllJobs(data.jobs || []);
-            setFilteredJobs(data.jobs || []);
-            filterJobs(role.trim());
+        try {
+          // Fetch latest jobs
+          const response = await fetch(`${API_URL}/api/jobs?limit=1000&date_filter=${dateFilter}`);
+          if (response.ok) {
+            const data = await response.json();
+            const currentJobCount = data.jobs?.length || 0;
             
-            // Also fetch companies
-            await fetchCompanies();
-            break;
+            // Check if we got new jobs
+            if (currentJobCount > initialJobCount) {
+              clearInterval(pollInterval);
+              setAllJobs(data.jobs || []);
+              setFilteredJobs(data.jobs || []);
+              filterJobs(role.trim());
+              await fetchCompanies();
+              setSearching(false);
+            }
           }
+        } catch (err) {
+          console.error('Polling error:', err);
         }
         
-        attempts++;
-      }
-      
-      // Final fetch after timeout or success
-      if (!hasNewJobs) {
-        await fetchAllJobs();
-        await fetchCompanies();
-        filterJobs(role.trim());
-      }
+        // Stop after max attempts
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          await fetchAllJobs();
+          await fetchCompanies();
+          filterJobs(role.trim());
+          setSearching(false);
+        }
+      }, 3000); // Poll every 3 seconds
       
     } catch (err) {
       setError('Search failed. Please try again.');
       console.error(err);
-    } finally {
-      // ALWAYS clear searching state
       setSearching(false);
     }
   };
