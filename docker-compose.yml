@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Python Backend
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: job-scraper-backend
+    # Removed direct port mapping
+    # ports:
+    #   - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - DATABASE_NAME=job_scraper
+      - CORS_ORIGINS=*
+      # Add other environment variables here if needed
+      # - RAPIDAPI_KEY=your_key
+    depends_on:
+      - mongo
+    restart: always
+    networks:
+      - app-network
+      # Connect to existing Traefik network if it's external, otherwise use internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.job-backend.rule=Host(`job-api.your-domain.com`)"
+      - "traefik.http.routers.job-backend.entrypoints=web"
+      - "traefik.http.services.job-backend.loadbalancer.server.port=8000"
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: job-scraper-frontend
+    # Removed direct port mapping
+    # ports:
+    #   - "3000:3000"
+    environment:
+      # If backend is on same domain/network, use internal service name or public URL
+      # For browser access, it must be the public URL
+      - NEXT_PUBLIC_API_URL=https://job-api.your-domain.com
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.job-frontend.rule=Host(`start.your-domain.com`)"
+      - "traefik.http.routers.job-frontend.entrypoints=web"
+      - "traefik.http.services.job-frontend.loadbalancer.server.port=3000"
+
+  # MongoDB Database
+  mongo:
+    image: mongo:7.0
+    container_name: job-scraper-mongo
+    # Internal only, no ports exposed
+    volumes:
+      - mongo-data:/data/db
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+    name: traefik_default 
+    # ^ IMPORTANT: This must match the network name Traefik is using from the other compose file
+
+volumes:
+  mongo-data:
