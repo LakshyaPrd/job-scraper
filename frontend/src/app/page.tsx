@@ -290,13 +290,15 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-[1800px]">
-        {/* Modern Header with Gradient */}
+        {/* Modern Header */}
         <div className="text-center mb-10 animate-fade-in">
           <div className="inline-block mb-4">
-            <h1 className="text-5xl md:text-6xl font-bold gradient-text mb-3">
-              Job Scraper Pro
+            <h1 className="text-5xl md:text-6xl font-bold mb-3">
+              <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+                Job Scraper Pro
+              </span>
             </h1>
-            <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-full"></div>
+            <div className="h-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"></div>
           </div>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Professional job scraping tool for recruiters. Search across multiple platforms with smart filtering and company insights.
@@ -305,7 +307,7 @@ export default function Home() {
 
         {/* Search Bar at Top */}
         <div className="mb-6">
-          <SearchBar onSearch={handleSearch} isSearching={searching} />
+          <SearchBar onSearch={handleSearch} loading={searching} />
         </div>
 
         {/* 2-Column Layout */}
@@ -338,15 +340,15 @@ export default function Home() {
             <ViewToggle 
               viewMode={viewMode} 
               onViewChange={setViewMode}
-            />  {/* Date Filter */}
-            <div className="bg-white rounded-xl shadow-sm p-4">
+              {/* Date Filter */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">📅 Filter by Date</h3>
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => setDateFilter('all')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
                     dateFilter === 'all'
-                      ? 'bg-green-600 text-white shadow-md'
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -356,7 +358,7 @@ export default function Home() {
                   onClick={() => setDateFilter('today')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
                     dateFilter === 'today'
-                      ? 'bg-green-600 text-white shadow-md'
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -366,7 +368,7 @@ export default function Home() {
                   onClick={() => setDateFilter('yesterday')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
                     dateFilter === 'yesterday'
-                      ? 'bg-green-600 text-white shadow-md'
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -376,7 +378,7 @@ export default function Home() {
                   onClick={() => setDateFilter('week')}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-all text-left ${
                     dateFilter === 'week'
-                      ? 'bg-green-600 text-white shadow-md'
+                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
@@ -387,7 +389,7 @@ export default function Home() {
 
             {/* Search History */}
             {searchHistory.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm p-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-gray-700">Your Searches</h3>
                   <button 
@@ -402,7 +404,7 @@ export default function Home() {
                     onClick={() => filterJobs(null)} 
                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
                       activeFilter === null 
-                        ? 'bg-blue-600 text-white' 
+                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -422,8 +424,8 @@ export default function Home() {
                           onClick={() => filterJobs(item.query)} 
                           className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-all text-left ${
                             activeFilter === item.query 
-                              ? 'bg-blue-600 text-white' 
-                              : 'bg-purple-100 text-gray-700 hover:bg-purple-200'
+                              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md' 
+                              : 'bg-orange-50 text-gray-700 hover:bg-orange-100'
                           }`}
                         >
                           {item.query} <span className="text-xs opacity-75">({matchCount})</span>
