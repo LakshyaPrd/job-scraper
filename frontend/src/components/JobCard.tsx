@@ -18,13 +18,13 @@ interface JobCardProps {
 }
 
 export default function JobCard({ job }: JobCardProps) {
-  const getSourceGradient = (source: string) => {
-    const gradients: Record<string, string> = {
-      linkedin: 'from-blue-500 to-blue-600',
-      indeed: 'from-purple-500 to-purple-600',
-      jsearch: 'from-green-500 to-emerald-600',
+  const getSourceColor = (source: string) => {
+    const colors: Record<string, string> = {
+      linkedin: 'bg-blue-500',
+      indeed: 'bg-purple-500',
+      jsearch: 'bg-green-500',
     };
-    return gradients[source] || 'from-gray-500 to-gray-600';
+    return colors[source] || 'bg-gray-500';
   };
 
   const formatDate = (postedDate?: string, createdAt?: string) => {
@@ -47,86 +47,82 @@ export default function JobCard({ job }: JobCardProps) {
   };
 
   return (
-    <div className="group glass rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-white/30 overflow-hidden transform hover:scale-[1.02] animate-fade-in">
-      {/* Gradient Header */}
-      <div className={`bg-gradient-to-r ${getSourceGradient(job.source)} p-6 text-white relative overflow-hidden`}>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-        
-        <div className="relative">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div className="flex-1">
-              <a
-                href={`/jobs/${job.job_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xl font-bold leading-tight hover:underline block mb-2 line-clamp-2"
-              >
-                {job.title}
-              </a>
-              <div className="flex items-center gap-2 text-white/90">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <span className="font-semibold">{job.company}</span>
-              </div>
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 overflow-hidden transform hover:scale-[1.01] animate-fade-in">
+      {/* Header with Company */}
+      <div className="p-5 border-b border-gray-100">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <a
+              href={`/jobs/${job.job_id}?company=${encodeURIComponent(job.company)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-lg font-bold text-gray-900 hover:text-orange-600 transition-colors line-clamp-2 mb-2 block"
+            >
+              {job.title}
+            </a>
+            <div className="flex items-center gap-2 text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <span className="font-semibold text-gray-900">{job.company}</span>
             </div>
-            <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/30 text-center">
-              <p className="text-xs font-bold uppercase tracking-wide">{job.source}</p>
-            </div>
+          </div>
+          <div className={`${getSourceColor(job.source)} px-3 py-1 rounded-lg text-white text-xs font-bold uppercase`}>
+            {job.source}
           </div>
         </div>
       </div>
 
-      {/* Content Section */}
-      <div className="p-6 bg-white/50 backdrop-blur-sm">
-        <div className="flex flex-wrap gap-3 mb-4">
-          {/* Location */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 rounded-lg border border-blue-200">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            </svg>
-            <span className="text-xs font-bold">{job.location || 'Remote'}</span>
-          </div>
-
-          {/* Date */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 rounded-lg border border-purple-200">
+      {/* Job Details */}
+      <div className="p-5 space-y-3">
+        {/* Location & Date */}
+        <div className="flex flex-wrap gap-3">
+          {job.location && (
+            <div className="flex items-center gap-1.5 text-sm text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{job.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-sm text-gray-600">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="text-xs font-bold">{formatDate(job.posted_date, job.created_at)}</span>
+            <span>{formatDate(job.posted_date, job.created_at)}</span>
           </div>
+        </div>
 
-          {/* Salary */}
+        {/* Salary & Job Type */}
+        <div className="flex flex-wrap gap-2">
           {job.salary && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-green-100 to-teal-100 text-green-800 rounded-lg border border-green-200">
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-sm font-medium">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-xs font-bold">{job.salary}</span>
-            </div>
+              {job.salary}
+            </span>
           )}
-
-          {/* Job Type */}
           {job.job_type && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-800 rounded-lg border border-orange-200">
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span className="text-xs font-bold">{job.job_type}</span>
-            </div>
+              {job.job_type}
+            </span>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-2">
           <a
             href={`/jobs/${job.job_id}?company=${encodeURIComponent(job.company)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             View Details
@@ -135,9 +131,9 @@ export default function JobCard({ job }: JobCardProps) {
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all shadow-md hover:shadow-lg"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-orange-600 font-semibold rounded-lg border-2 border-orange-600 hover:bg-orange-600 hover:text-white transition-all"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
             Apply
